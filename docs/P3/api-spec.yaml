@@ -1,0 +1,2790 @@
+openapi: "3.0.3"
+info:
+  title: CampusHub 校园互助服务平台 API
+  description: |
+    校园互助服务平台（CampusHub）后端 RESTful API。
+    基于前后端分离架构，使用 JWT 进行身份认证。
+
+    ## 优先级说明
+    - **P0**：核心功能，必须实现
+    - **P1**：应做功能
+    - **P2**：可选功能
+
+    ## 认证方式
+    所有需要认证的接口在请求头中携带：
+    ```
+    Authorization: Bearer <token>
+    ```
+  version: "1.0.0"
+  contact:
+    name: CampusHub Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: 本地开发环境
+  - url: https://api.campushub.example.com/api
+    description: 生产环境（HTTPS 必须）
+
+paths:
+  # ============================================================
+  # Auth - 认证模块 (P0)
+  # ============================================================
+  /auth/register:
+    post:
+      tags:
+        - 认证 (Auth)
+      summary: 用户注册
+      description: "对应需求 F01：用户通过学号+密码注册，系统验证学号真实性"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - studentId
+                - password
+                - nickname
+              properties:
+                studentId:
+                  type: string
+                  description: 学号（10 位数字）
+                  minLength: 10
+                  maxLength: 10
+                  pattern: "^\d{10}$"
+                  example: "2024123456"
+                password:
+                  type: string
+                  description: "密码（长度 8-32 位，必须包含字母和数字）"
+                  minLength: 8
+                  maxLength: 32
+                  pattern: "^(?=.*[A-Za-z])(?=.*\d).{8,32}$"
+                  example: "Abc12345"
+                nickname:
+                  type: string
+                  description: 昵称
+                  minLength: 1
+                  maxLength: 20
+                  example: "小明"
+                name:
+                  type: string
+                  description: 真实姓名（选填）
+                  maxLength: 20
+                  example: "张明"
+                email:
+                  type: string
+                  format: email
+                  maxLength: 100
+                  description: 邮箱（选填）
+                  example: "zhangming@smail.nju.edu.cn"
+                avatar:
+                  type: string
+                  format: uri
+                  maxLength: 500
+                  description: 头像 URL（选填）
+      responses:
+        "201":
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 201
+                  message:
+                    type: string
+                    example: "注册成功"
+                  data:
+                    $ref: "#/components/schemas/UserProfile"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: 学号已注册
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/login:
+    post:
+      tags:
+        - 认证 (Auth)
+      summary: 用户登录
+      description: "对应需求 F01：用户通过学号+密码登录，返回 JWT token。登录失败 5 次后触发临时锁定"
+      security: []
+      x-rate-limit:
+        maxRequests: 20
+        windowSeconds: 60
+        description: "登录接口限流：每 IP 每分钟最多 20 次"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - studentId
+                - password
+              properties:
+                studentId:
+                  type: string
+                  description: 学号
+                  minLength: 10
+                  maxLength: 10
+                  pattern: "^\d{10}$"
+                  example: "2024123456"
+                password:
+                  type: string
+                  description: 密码
+                  minLength: 8
+                  maxLength: 32
+                  example: "Abc12345"
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "登录成功"
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: JWT 访问令牌
+                        example: "eyJhbGciOiJIUzI1NiIs..."
+                      refreshToken:
+                        type: string
+                        description: "刷新令牌（用于获取新的 access token，有效期 7 天）"
+                        example: "eyJhbGciOiJIUzI1NiIs..."
+                      expiresIn:
+                        type: integer
+                        description: Token 有效期（秒）
+                        example: 3600
+                      user:
+                        $ref: "#/components/schemas/UserProfile"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: 学号或密码错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/logout:
+    post:
+      tags:
+        - 认证 (Auth)
+      summary: 用户登出
+      description: "将当前 JWT token 和 refresh token 加入黑名单（需要 Redis 支持）"
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+                  description: 刷新令牌（选填，若传入则一并失效）
+      responses:
+        "200":
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "登出成功"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/refresh:
+    post:
+      tags:
+        - 认证 (Auth)
+      summary: 刷新访问令牌
+      description: "使用 refresh token 获取新的 access token，采用轮转策略（旧 refresh token 同时失效）"
+      x-rate-limit:
+        maxRequests: 30
+        windowSeconds: 60
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  description: 登录时获得的刷新令牌
+                  example: "eyJhbGciOiJIUzI1NiIs..."
+      responses:
+        "200":
+          description: Token 刷新成功，旧的 refresh token 同时失效
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "Token 刷新成功"
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: 新的 JWT 访问令牌
+                      refreshToken:
+                        type: string
+                        description: 新的刷新令牌
+                      expiresIn:
+                        type: integer
+                        description: Token 有效期（秒）
+                        example: 3600
+        "401":
+          description: "refresh token 无效或已过期"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================================
+  # Users - 用户管理 (P0)
+  # ============================================================
+  /users/me:
+    get:
+      tags:
+        - 用户 (User)
+      summary: 获取当前用户个人信息
+      description: "对应需求 F02、F05：获取个人资料，敏感信息脱敏展示"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 成功获取个人信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags:
+        - 用户 (User)
+      summary: 更新当前用户个人信息
+      description: "对应需求 F02、F04：编辑个人资料，可配置真实姓名展示开关"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nickname:
+                  type: string
+                  description: 昵称
+                  minLength: 1
+                  maxLength: 20
+                  example: "小明"
+                avatar:
+                  type: string
+                  format: uri
+                  maxLength: 500
+                  description: 头像 URL
+                  example: "https://oss.example.com/avatars/123.jpg"
+                college:
+                  type: string
+                  maxLength: 50
+                  description: 学院
+                  example: "计算机科学与技术系"
+                phone:
+                  type: string
+                  description: "联系方式（11 位手机号）"
+                  minLength: 11
+                  maxLength: 11
+                  pattern: "^1[3-9]\\d{9}$"
+                  example: "138****1234"
+                showRealName:
+                  type: boolean
+                  description: "是否对外展示真实姓名（对应 F04）"
+                  example: false
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "个人信息更新成功"
+                  data:
+                    $ref: "#/components/schemas/UserProfile"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /users/{userId}/profile:
+    get:
+      tags:
+        - 用户 (User)
+      summary: 获取指定用户公开信息
+      description: "获取其他用户的公开资料（信用分、评价等），敏感信息脱敏。需要登录态以防止爬虫"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 用户 ID
+          example: 1
+      responses:
+        "200":
+          description: 成功获取用户公开信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    $ref: "#/components/schemas/PublicUserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================================
+  # Demands - 需求发布与浏览 (P0)
+  # ============================================================
+  /demands:
+    post:
+      tags:
+        - 需求 (Demand)
+      summary: 发布需求
+      description: "对应需求 F06、F07：用户发布互助需求"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - category
+                - description
+              properties:
+                title:
+                  type: string
+                  description: 需求标题
+                  minLength: 1
+                  maxLength: 100
+                  example: "帮取快递——仙林校区"
+                description:
+                  type: string
+                  description: 需求详细描述
+                  minLength: 1
+                  maxLength: 2000
+                  example: "菜鸟驿站有两个包裹，取件码分别是 1-2345 和 1-6789，送到 4 栋楼下即可。"
+                category:
+                  type: string
+                  description: "需求分类"
+                  enum:
+                    - 快递代取
+                    - 学习辅导
+                    - 二手交易
+                    - 活动组队
+                    - 失物招领
+                    - 拼车拼单
+                    - 找搭子
+                    - 咨询答疑
+                    - 其他
+                  example: "快递代取"
+                location:
+                  type: string
+                  description: 地点
+                  example: "仙林校区4栋"
+                expectedTime:
+                  type: string
+                  format: date-time
+                  description: 期望完成时间（ISO 8601 格式）
+                  example: "2026-05-15T18:00:00Z"
+                reward:
+                  type: number
+                  format: float
+                  description: "报酬（0 表示无偿互助，对应 F06）"
+                  minimum: 0
+                  maximum: 9999
+                  default: 0
+                  example: 5.0
+                isUrgent:
+                  type: boolean
+                  description: "是否为紧急需求（P1 功能，紧急需求置顶展示，对应 F10）"
+                  default: false
+                  example: false
+                isAnonymous:
+                  type: boolean
+                  description: "是否匿名发布（P1 功能，对应 F03）"
+                  default: false
+                  example: false
+                images:
+                  type: array
+                  description: 图片 URL 列表
+                  maxItems: 9
+                  items:
+                    type: string
+                    format: uri
+                    maxLength: 500
+      responses:
+        "201":
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 201
+                  message:
+                    type: string
+                    example: "需求发布成功"
+                  data:
+                    $ref: "#/components/schemas/Demand"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: "信用分低于 40 分，禁止发布需求（对应 F22）"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    get:
+      tags:
+        - 需求 (Demand)
+      summary: 浏览需求列表（含筛选）
+      description: "对应需求 F08、F10：按分类、时间、距离、紧急状态筛选需求列表"
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum:
+              - 快递代取
+              - 学习辅导
+              - 二手交易
+              - 活动组队
+              - 失物招领
+              - 拼车拼单
+              - 找搭子
+              - 咨询答疑
+              - 其他
+          description: 按分类筛选
+          example: "快递代取"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - 开放
+              - 进行中
+              - 已完成
+              - 已关闭
+          description: 按需求状态筛选
+          example: "开放"
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: 关键词搜索（匹配标题和描述）
+          example: "快递"
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum:
+              - newest
+              - oldest
+              - reward_high
+              - reward_low
+          description: 排序方式
+          default: newest
+          example: "newest"
+        - name: isUrgent
+          in: query
+          schema:
+            type: boolean
+          description: "筛选紧急需求（P1，对应 F10）"
+          example: false
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: 页码（从 1 开始）
+          example: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: 每页条数
+          example: 20
+      responses:
+        "200":
+          description: 成功获取需求列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/DemandSummary"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /demands/{demandId}:
+    get:
+      tags:
+        - 需求 (Demand)
+      summary: 获取需求详情
+      description: "对应需求 F09：查看需求详情（含发布者信息、当前状态、是否匿名）"
+      parameters:
+        - name: demandId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 需求 ID
+          example: 1
+      responses:
+        "200":
+          description: 成功获取需求详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    $ref: "#/components/schemas/Demand"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    put:
+      tags:
+        - 需求 (Demand)
+      summary: 更新需求
+      description: "需求方修改已发布的需求（仅限状态为「开放」的需求）"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: demandId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 2000
+                category:
+                  type: string
+                  enum:
+                    - 快递代取
+                    - 学习辅导
+                    - 二手交易
+                    - 活动组队
+                    - 失物招领
+                    - 拼车拼单
+                    - 找搭子
+                    - 咨询答疑
+                    - 其他
+                location:
+                  type: string
+                expectedTime:
+                  type: string
+                  format: date-time
+                reward:
+                  type: number
+                  format: float
+                  minimum: 0
+                isUrgent:
+                  type: boolean
+                isAnonymous:
+                  type: boolean
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "需求更新成功"
+                  data:
+                    $ref: "#/components/schemas/Demand"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: "无权操作（不是发布者或需求已关闭）"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      tags:
+        - 需求 (Demand)
+      summary: 删除需求
+      description: "需求方删除已发布的需求（仅限状态为「开放」的需求）"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: demandId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "需求已删除"
+        "403":
+          description: "无权操作"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================================
+  # Orders - 订单流程管理 (P0)
+  # ============================================================
+  /orders:
+    post:
+      tags:
+        - 订单 (Order)
+      summary: 接单
+      description: "对应需求 F12、F13：服务方对「开放」状态的需求点击接单，创建订单"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - demandId
+              properties:
+                demandId:
+                  type: integer
+                  description: 需求 ID
+                  example: 1
+                message:
+                  type: string
+                  description: 接单留言（选填）
+                  maxLength: 500
+                  example: "我在四栋，可以帮你取！"
+      responses:
+        "201":
+          description: 接单成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 201
+                  message:
+                    type: string
+                    example: "接单成功"
+                  data:
+                    $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: "抢单冲突：需求已被其他人接走（使用乐观锁防止并发抢单，对应 F12）"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 409
+                  message:
+                    type: string
+                    example: "该需求已被其他人接走"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    get:
+      tags:
+        - 订单 (Order)
+      summary: 查看用户的订单列表
+      description: "对应需求 F17：用户查看自己的订单历史记录（作为需求方和服务方）"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum:
+              - publisher
+              - provider
+          description: "筛选角色：publisher（作为需求方）、provider（作为服务方）。不传则查全部"
+          example: "publisher"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - 进行中
+              - 待确认
+              - 已完成
+              - 已取消
+              - 纠纷中
+          description: 按订单状态筛选
+          example: "进行中"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: 成功获取订单列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Order"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /orders/{orderId}:
+    get:
+      tags:
+        - 订单 (Order)
+      summary: 查看订单详情
+      description: "对应需求 F17：查看指定订单的完整信息（含双方信息、聊天入口等）"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 订单 ID
+          example: 1
+      responses:
+        "200":
+          description: 成功获取订单详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    $ref: "#/components/schemas/OrderDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: "无权查看（非订单参与方）"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /orders/{orderId}/complete:
+    put:
+      tags:
+        - 订单 (Order)
+      summary: 服务方提交「已完成」
+      description: "对应需求 F14：服务方完成任务后提交确认，订单进入「待确认」状态，需求方有 48 小时确认期"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 提交成功，订单进入「待确认」状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "已提交完成确认，等待需求方确认"
+                  data:
+                    $ref: "#/components/schemas/Order"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: "无权操作（仅服务方可操作）"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "订单状态不允许此操作"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /orders/{orderId}/confirm:
+    put:
+      tags:
+        - 订单 (Order)
+      summary: 需求方确认完成
+      description: "对应需求 F14：需求方确认服务方已完成任务，订单变更为「完成」状态；若涉及报酬，触发打款"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 确认完成
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "订单确认完成"
+                  data:
+                    $ref: "#/components/schemas/Order"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: "无权操作（仅需求方可确认）"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "订单状态不允许此操作"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /orders/{orderId}/cancel:
+    put:
+      tags:
+        - 订单 (Order)
+      summary: 取消订单
+      description: "取消订单（P1）。需求方可自由取消；服务方取消视为爽约（扣信用分，对应 F21）"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: 取消原因
+                  maxLength: 500
+                  example: "临时有事，无法完成"
+      responses:
+        "200":
+          description: 订单已取消
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "订单已取消"
+                  data:
+                    $ref: "#/components/schemas/Order"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: "无权操作"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "订单状态不允许取消（如已完成或已取消的订单）"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /orders/{orderId}/dispute:
+    post:
+      tags:
+        - 订单 (Order)
+      summary: 发起纠纷申诉
+      description: "对应需求 F16：双方均可发起纠纷申诉，管理员介入处理（P1）"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  description: 申诉理由
+                  maxLength: 2000
+                  example: "服务方未按时送达"
+                evidence:
+                  type: array
+                  description: 证据图片 URL 列表
+                  items:
+                    type: string
+                    format: uri
+      responses:
+        "201":
+          description: 申诉已提交，等待管理员处理
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 201
+                  message:
+                    type: string
+                    example: "申诉已提交，平台管理员将尽快处理"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "已有进行中的纠纷，不可重复发起"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================================
+  # Reviews - 评价与信用 (P1)
+  # ============================================================
+  /reviews:
+    post:
+      tags:
+        - 评价 (Review)
+      summary: 提交评价
+      description: "对应需求 F18：订单完成后，双方可进行评分和文字评价"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+                - rating
+              properties:
+                orderId:
+                  type: integer
+                  description: 订单 ID
+                  example: 1
+                rating:
+                  type: integer
+                  description: "评分（1-5 星）"
+                  minimum: 1
+                  maximum: 5
+                  example: 5
+                content:
+                  type: string
+                  description: 文字评价内容（选填）
+                  maxLength: 1000
+                  example: "非常靠谱，准时送达！"
+      responses:
+        "201":
+          description: 评价提交成功（系统会根据评分自动更新信用分）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 201
+                  message:
+                    type: string
+                    example: "评价提交成功"
+                  data:
+                    $ref: "#/components/schemas/Review"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: "已评价过该订单"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: "订单未完成，不可评价"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /users/{userId}/reviews:
+    get:
+      tags:
+        - 评价 (Review)
+      summary: 获取用户收到的评价列表
+      description: "对应需求 F20：用户主页展示近 10 条评价内容"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 用户 ID
+          example: 1
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        "200":
+          description: 成功获取评价列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Review"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================================
+  # Notifications - 消息通知 (P1)
+  # ============================================================
+  /notifications:
+    get:
+      tags:
+        - 通知 (Notification)
+      summary: 获取通知列表
+      description: "对应需求 F23、F24：用户查看所有通知记录（接单通知、状态变更、评价通知等）"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: 成功获取通知列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Notification"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /notifications/{notificationId}:
+    patch:
+      tags:
+        - 通知 (Notification)
+      summary: 标记通知为已读
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - isRead
+              properties:
+                isRead:
+                  type: boolean
+                  description: 是否已读
+                  example: true
+      responses:
+        "200":
+          description: 标记成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "已标记为已读"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================================
+  # Messages - 即时通讯 (P2)
+  # ============================================================
+  /messages:
+    get:
+      tags:
+        - 消息 (Message)
+      summary: 获取订单聊天记录
+      description: "对应需求 F25：获取订单详情页的私信沟通记录（P2）"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 订单 ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: 成功获取聊天记录
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Message"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: "无权查看（非订单参与方）"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags:
+        - 消息 (Message)
+      summary: 发送聊天消息
+      description: "对应需求 F25：在订单详情页发送私信（支持文字和图片，P2）"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+                - content
+              properties:
+                orderId:
+                  type: integer
+                  description: 订单 ID
+                  example: 1
+                contentType:
+                  type: string
+                  description: "消息类型"
+                  enum:
+                    - text
+                    - image
+                  default: text
+                  example: "text"
+                content:
+                  type: string
+                  description: "消息内容（文字内容或图片 URL）"
+                  maxLength: 2000
+                  example: "我已经到楼下了"
+      responses:
+        "201":
+          description: 消息发送成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 201
+                  message:
+                    type: string
+                    example: "消息发送成功"
+                  data:
+                    $ref: "#/components/schemas/Message"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: "无权发送（非订单参与方）"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================================
+  # Recommendations - 智能推荐 (P2)
+  # ============================================================
+  /recommendations/demands:
+    get:
+      tags:
+        - 推荐 (Recommendation)
+      summary: 获取推荐需求列表
+      description: "对应需求 F26、F27：基于用户历史行为推荐相关需求，按匹配度排序（P2）"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: 成功获取推荐需求列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/DemandSummary"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================================
+  # Admin - 管理后台 (P2)
+  # ============================================================
+  /admin/users:
+    get:
+      tags:
+        - 管理后台 (Admin)
+      summary: 管理员查看用户列表
+      description: "对应需求 F28：管理员查看、搜索用户"
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: "关键词搜索（学号/昵称/姓名）"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - 正常
+              - 已禁用
+          description: 按账号状态筛选
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: 成功获取用户列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AdminUserItem"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/users/{userId}/status:
+    put:
+      tags:
+        - 管理后台 (Admin)
+      summary: 禁用/启用用户
+      description: "对应需求 F28：管理员禁用或启用用户账号"
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - disable
+                    - enable
+                  description: "操作类型：disable（禁用）、enable（启用）"
+                  example: "disable"
+                reason:
+                  type: string
+                  description: 操作原因
+                  maxLength: 500
+                  example: "多次违规发布虚假需求"
+      responses:
+        "200":
+          description: 操作成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "用户已禁用"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/demands:
+    get:
+      tags:
+        - 管理后台 (Admin)
+      summary: 管理员查看需求列表
+      description: "对应需求 F29：管理员查看所有需求（含违规审核）"
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - 开放
+              - 进行中
+              - 已完成
+              - 已关闭
+              - 待审核
+          description: 按需求状态筛选
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: 成功获取需求列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Demand"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/demands/{demandId}:
+    delete:
+      tags:
+        - 管理后台 (Admin)
+      summary: 管理员删除/下架违规需求
+      description: "对应需求 F29：管理员审核并删除违规需求"
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: demandId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: 删除原因
+                  example: "包含违规内容"
+      responses:
+        "200":
+          description: 需求已删除
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "需求已下架"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/statistics:
+    get:
+      tags:
+        - 管理后台 (Admin)
+      summary: 查看数据统计看板
+      description: "对应需求 F30：管理员查看平台统计数据（日活、订单量、分类分布等，P2）"
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      responses:
+        "200":
+          description: 成功获取统计数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      dailyActiveUsers:
+                        type: integer
+                        description: 日活跃用户数
+                        example: 156
+                      totalOrders:
+                        type: integer
+                        description: 总订单数
+                        example: 1280
+                      completedOrders:
+                        type: integer
+                        description: 已完成订单数
+                        example: 1024
+                      pendingDisputes:
+                        type: integer
+                        description: 待处理纠纷数
+                        example: 3
+                      categoryDistribution:
+                        type: object
+                        description: 需求分类分布
+                        additionalProperties:
+                          type: integer
+                        example:
+                          快递代取: 450
+                          学习辅导: 230
+                          二手交易: 180
+                          活动组队: 120
+                          失物招领: 90
+                          拼车拼单: 80
+                          找搭子: 70
+                          咨询答疑: 40
+                          其他: 20
+                      dailyNewUsers:
+                        type: array
+                        description: 近 7 天新增用户数
+                        items:
+                          type: object
+                          properties:
+                            date:
+                              type: string
+                              format: date
+                              example: "2026-05-05"
+                            count:
+                              type: integer
+                              example: 12
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/disputes:
+    get:
+      tags:
+        - 管理后台 (Admin)
+      summary: 查看纠纷列表
+      description: "对应需求 F31：管理员查看待处理的纠纷申诉"
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - 待处理
+              - 已处理
+          description: 按处理状态筛选
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: 成功获取纠纷列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Dispute"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/disputes/{disputeId}/resolve:
+    put:
+      tags:
+        - 管理后台 (Admin)
+      summary: 处理纠纷
+      description: "对应需求 F31：管理员处理纠纷，做出裁决"
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - resolution
+              properties:
+                resolution:
+                  type: string
+                  description: 处理结果
+                  example: "判定服务方无责，订单按已完成处理"
+                action:
+                  type: string
+                  enum:
+                    - complete
+                    - cancel
+                    - refund
+                  description: "操作：完成订单、取消订单、退款"
+                  example: "complete"
+      responses:
+        "200":
+          description: 纠纷处理成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "纠纷处理完成"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: "该纠纷已处理，不可重复操作"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/applications:
+    get:
+      tags:
+        - 管理后台 (Admin)
+      summary: 查看管理员申请列表
+      description: "对应需求 F32：查看学生申请成为志愿管理员的请求（P2）"
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - 待审批
+              - 已通过
+              - 已拒绝
+          description: 按审批状态筛选
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: 成功获取申请列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AdminApplication"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/applications/{applicationId}/review:
+    put:
+      tags:
+        - 管理后台 (Admin)
+      summary: 审批管理员申请
+      description: "对应需求 F32：现有管理员审批新的管理员申请（P2）"
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - approve
+                    - reject
+                  description: "审批操作：approve（通过）、reject（拒绝）"
+                reason:
+                  type: string
+                  description: "审批意见"
+      responses:
+        "200":
+          description: "审批完成"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "申请已通过"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: "该申请已被审批，不可重复操作"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================================
+  # File Upload - 文件上传
+  # ============================================================
+  /upload:
+    post:
+      tags:
+        - 文件上传
+      summary: 上传文件（头像/图片）
+      description: "上传图片，返回 URL（用于头像、需求图片、评价凭证等）"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 上传的文件（支持 jpg/png/gif/webp，最大 10MB）
+                  x-file-mime-types:
+                    - image/jpeg
+                    - image/png
+                    - image/gif
+                    - image/webp
+                  x-file-max-size: 10485760
+                type:
+                  type: string
+                  enum:
+                    - avatar
+                    - demand
+                    - evidence
+                  description: "用途：avatar（头像）、demand（需求图片）、evidence（凭证）"
+                  example: "avatar"
+      responses:
+        "201":
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 201
+                  message:
+                    type: string
+                    example: "上传成功"
+                  data:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                        format: uri
+                        description: 文件访问 URL
+                        example: "https://oss.example.com/uploads/abc123.jpg"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT 认证，在请求头中携带：Authorization: Bearer <token>"
+    AdminAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "管理员认证：JWT 中包含 role=admin 字段，与 BearerAuth 使用相同的 Token 格式，但要求管理员角色"
+
+  schemas:
+    # -------- 用户相关 --------
+    UserProfile:
+      description: 当前用户的完整个人信息
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        studentId:
+          type: string
+          description: "学号（脱敏展示，如 2024*****456）"
+          example: "2024*****456"
+        nickname:
+          type: string
+          example: "小明"
+        name:
+          type: string
+          description: "真实姓名（根据用户设置决定是否展示，对应 F04）"
+          example: "张明"
+        college:
+          type: string
+          description: 学院
+          example: "计算机科学与技术系"
+        phone:
+          type: string
+          description: "手机号（脱敏展示，如 138****1234）"
+          example: "138****1234"
+        email:
+          type: string
+          format: email
+          example: "zhangming@smail.nju.edu.cn"
+        avatar:
+          type: string
+          format: uri
+          example: "https://oss.example.com/avatars/123.jpg"
+        creditScore:
+          type: integer
+          description: "信用分（初始 70，满分 100，对应 F19）"
+          minimum: 0
+          maximum: 100
+          example: 85
+        role:
+          type: string
+          enum:
+            - student
+            - admin
+          description: "用户角色"
+          example: "student"
+        showRealName:
+          type: boolean
+          description: "是否对外展示真实姓名（对应 F04）"
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+
+    PublicUserProfile:
+      description: 对外的用户公开信息（敏感信息已脱敏）
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nickname:
+          type: string
+          example: "小明"
+        name:
+          type: string
+          nullable: true
+          description: "真实姓名（仅在用户允许展示时返回，对应 F04）"
+          example: null
+        college:
+          type: string
+          example: "计算机科学与技术系"
+        avatar:
+          type: string
+          format: uri
+        creditScore:
+          type: integer
+          example: 85
+        totalOrders:
+          type: integer
+          description: 完成的订单数
+          example: 23
+        joinedAt:
+          type: string
+          format: date-time
+
+    AdminUserItem:
+      description: 管理员视图的用户信息
+      type: object
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: string
+        nickname:
+          type: string
+        name:
+          type: string
+        college:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        creditScore:
+          type: integer
+        status:
+          type: string
+          enum:
+            - 正常
+            - 已禁用
+        role:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+
+    # -------- 需求相关 --------
+    Demand:
+      description: 需求详细信息
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: "帮取快递——仙林校区"
+        description:
+          type: string
+          example: "菜鸟驿站有两个包裹..."
+        category:
+          type: string
+          example: "快递代取"
+        location:
+          type: string
+          example: "仙林校区4栋"
+        expectedTime:
+          type: string
+          format: date-time
+          example: "2026-05-15T18:00:00Z"
+        reward:
+          type: number
+          format: float
+          description: "报酬（0 表示无偿）"
+          example: 5.0
+        status:
+          type: string
+          enum:
+            - 开放
+            - 进行中
+            - 已完成
+            - 已关闭
+          example: "开放"
+        isUrgent:
+          type: boolean
+          description: "是否紧急需求（置顶展示，对应 F10）"
+          example: false
+        isAnonymous:
+          type: boolean
+          description: "是否匿名发布（对应 F03）"
+          example: false
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        publisher:
+          $ref: "#/components/schemas/PublicUserProfile"
+        currentOrder:
+          type: object
+          nullable: true
+          description: "当前订单信息（状态为「进行中」时返回，用于快速查看）"
+          properties:
+            id:
+              type: integer
+            provider:
+              $ref: "#/components/schemas/PublicUserProfile"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DemandSummary:
+      description: 需求列表中的摘要信息
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        category:
+          type: string
+        location:
+          type: string
+        reward:
+          type: number
+          format: float
+        status:
+          type: string
+        isUrgent:
+          type: boolean
+        isAnonymous:
+          type: boolean
+        publisher:
+          type: object
+          properties:
+            id:
+              type: integer
+            nickname:
+              type: string
+            avatar:
+              type: string
+              format: uri
+            creditScore:
+              type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    # -------- 订单相关 --------
+    Order:
+      description: 订单信息
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        demandId:
+          type: integer
+          example: 1
+        demandTitle:
+          type: string
+          example: "帮取快递——仙林校区"
+        publisherId:
+          type: integer
+          description: 需求方（发布者）ID
+          example: 1
+        providerId:
+          type: integer
+          description: 服务方（接单者）ID
+          example: 2
+        status:
+          type: string
+          description: "订单状态：进行中 → 待确认 → 已完成 | 已取消 | 纠纷中"
+          enum:
+            - 进行中
+            - 待确认
+            - 已完成
+            - 已取消
+            - 纠纷中
+          example: "进行中"
+        reward:
+          type: number
+          format: float
+          description: "报酬金额"
+          example: 5.0
+        isPaid:
+          type: boolean
+          description: "是否已付款/托管（对应 F15）"
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    OrderDetail:
+      description: 订单详细信息（含双方信息）
+      allOf:
+        - $ref: "#/components/schemas/Order"
+        - type: object
+          properties:
+            publisher:
+              $ref: "#/components/schemas/PublicUserProfile"
+            provider:
+              $ref: "#/components/schemas/PublicUserProfile"
+            demand:
+              $ref: "#/components/schemas/DemandSummary"
+
+    # -------- 评价相关 --------
+    Review:
+      description: 评价信息
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        orderId:
+          type: integer
+          example: 1
+        fromUser:
+          $ref: "#/components/schemas/PublicUserProfile"
+        toUserId:
+          type: integer
+          description: 被评价用户 ID
+          example: 2
+        rating:
+          type: integer
+          description: "评分（1-5 星）"
+          minimum: 1
+          maximum: 5
+          example: 5
+        content:
+          type: string
+          nullable: true
+          example: "非常靠谱，准时送达！"
+        createdAt:
+          type: string
+          format: date-time
+
+    # -------- 通知相关 --------
+    Notification:
+      description: 系统通知
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum:
+            - order_taken
+            - order_completed
+            - order_confirmed
+            - order_cancelled
+            - review_received
+            - dispute_update
+          description: "通知类型"
+          example: "order_taken"
+        title:
+          type: string
+          example: "接单通知"
+        content:
+          type: string
+          example: "用户「小红」已接取了您的需求「帮取快递」"
+        relatedId:
+          type: integer
+          description: "关联的业务 ID（订单 ID/需求 ID）"
+          example: 1
+        isRead:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+
+    # -------- 消息相关 --------
+    Message:
+      description: 聊天消息
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        senderId:
+          type: integer
+        sender:
+          type: object
+          properties:
+            id:
+              type: integer
+            nickname:
+              type: string
+            avatar:
+              type: string
+              format: uri
+        contentType:
+          type: string
+          enum:
+            - text
+            - image
+          example: "text"
+        content:
+          type: string
+          example: "我已经到楼下了"
+        createdAt:
+          type: string
+          format: date-time
+
+    # -------- 纠纷相关 --------
+    Dispute:
+      description: 纠纷申诉
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        initiatorId:
+          type: integer
+        reason:
+          type: string
+        evidence:
+          type: array
+          items:
+            type: string
+            format: uri
+        status:
+          type: string
+          enum:
+            - 待处理
+            - 已处理
+          example: "待处理"
+        resolution:
+          type: string
+          nullable: true
+          description: 处理结果
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    # -------- 管理员申请 --------
+    AdminApplication:
+      description: 管理员申请
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        applicant:
+          $ref: "#/components/schemas/PublicUserProfile"
+        reason:
+          type: string
+          description: 申请理由
+        status:
+          type: string
+          enum:
+            - 待审批
+            - 已通过
+            - 已拒绝
+        reviewerId:
+          type: integer
+          nullable: true
+        reviewComment:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    # -------- 通用 --------
+    Pagination:
+      description: 分页信息
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          description: 总记录数
+          example: 156
+        totalPages:
+          type: integer
+          description: 总页数
+          example: 8
+
+    ApiError:
+      description: 错误响应
+      type: object
+      properties:
+        code:
+          type: integer
+          description: "业务状态码（非 HTTP 状态码）"
+          example: 400
+        message:
+          type: string
+          description: "错误描述"
+          example: "请求参数有误"
+        errors:
+          type: array
+          description: "详细的字段级错误信息（选填）"
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "password"
+              message:
+                type: string
+                example: "密码长度至少 8 位"
+        timestamp:
+          type: string
+          format: date-time
+          description: "错误发生时间"
+
+  responses:
+    BadRequest:
+      description: "请求参数错误（400）"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Unauthorized:
+      description: "未认证（401）—— Token 缺失、过期或无效"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Forbidden:
+      description: "无权限（403）—— 当前用户角色无权执行此操作"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: "资源不存在（404）"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    TooManyRequests:
+      description: "请求过于频繁（429）—— 触发频率限制，请稍后重试"
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: "时间窗口内的请求上限"
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: "剩余可用请求数"
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: "限流重置的 Unix 时间戳"
+        Retry-After:
+          schema:
+            type: integer
+          description: "建议等待的秒数"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    PayloadTooLarge:
+      description: "上传文件过大（413）"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    InternalError:
+      description: "服务器内部错误（500）"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+  # -------- 错误码定义 --------
+  x-error-codes:
+    - code: 200
+      description: 请求成功
+    - code: 201
+      description: 创建成功
+    - code: 400
+      description: "请求参数错误——缺少必填字段、格式不正确、字段值不在枚举范围内等"
+    - code: 401
+      description: "认证失败——Token 缺失、过期或无效"
+    - code: 403
+      description: "权限不足——当前用户角色不允许执行此操作（如普通用户访问管理员接口、信用分＜40发布需求等）"
+    - code: 404
+      description: "资源不存在——请求的资源（用户/需求/订单等）不存在"
+    - code: 409
+      description: "资源冲突——数据不满足约束条件（如学号已注册、抢单冲突、重复评价、订单状态不允许操作等）"
+    - code: 422
+      description: "不可处理的实体——业务规则校验失败（如信用分不足、爽约频率过高等）"
+    - code: 500
+      description: "服务器内部错误——未预期的异常，请联系管理员"
