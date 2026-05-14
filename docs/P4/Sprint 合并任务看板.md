@@ -9,6 +9,16 @@
 | 前端A | 孙正奇 | 用户、需求相关界面 |
 | 前端B | 宋丞轩 | 订单、评价、消息、通知界面 |
 
+## 后端 Monorepo 模块归属
+
+| 工作区 | 包名 | 端口 | 负责 | 包含模块 |
+| :--- | :--- | :--- | :--- | :--- |
+| `backend/shared/` | `@campushub/shared` | — | 共同维护 | utils, middleware, repository, Prisma client |
+| `backend/service-a/` | `@campushub/service-a` | 3001 | 后端A | demand, order |
+| `backend/service-b/` | `@campushub/service-b` | 3002 | 后端B | auth, user, upload |
+
+> 服务通过 `@campushub/shared` 导入共享代码，模块内使用相对路径导入。
+
 > **参考依据**：详细设计文档 `docs/P3/详细设计文档.md`、API 规范 `docs/P3/api-spec.yaml`
 
 ---
@@ -19,6 +29,7 @@
 
 | 任务ID | 任务描述 | 负责人 | 优先级 | 完成标准 | 预计 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| T00 | ✅ **[后端]** Monorepo 拆分（npm workspaces）| — | P0 | `shared/` + `service-a/` + `service-b/` 三个包；`@campushub/shared` barrel export；tsc 零错误；imports 全部更新 | 完成 |
 | T01 | **[后端]** 搭建项目骨架，配置 MySQL+Prisma，定义 User 模型 | 后端A | P0 | Prisma `npx prisma db push` 成功；User 表含 student_id/password_hash/nickname/credit_score/role 等核心字段 | 3h |
 | T02 | **[后端]** 实现用户注册接口（F01, F05）| 后端B | P0 | `POST /api/auth/register` 可用；学号10位数字校验；密码 bcrypt 加密入库；student_id 唯一冲突返回 409；成功返回 201 | 3h |
 | T03 | **[后端]** 实现用户登录接口，生成 JWT（F01）| 后端B | P0 | `POST /api/auth/login` 可用；学号/密码错误返回 401；成功返回 token+refreshToken+user 信息；实现 JWT 验证中间件 | 3h |
