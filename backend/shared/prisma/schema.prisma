@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  student
+  admin
+}
+
+enum UserStatus {
+  正常
+  已禁用
+}
+
+enum DemandCategory {
+  快递代取
+  学习辅导
+  二手交易
+  活动组队
+  失物招领
+  拼车拼单
+  找搭子
+  咨询答疑
+  其他
+}
+
+enum DemandStatus {
+  开放
+  进行中
+  已完成
+  已关闭
+}
+
+enum OrderStatus {
+  进行中
+  待确认
+  已完成
+  已取消
+  纠纷中
+}
+
+model User {
+  id             Int        @id @default(autoincrement())
+  studentId      String     @unique @map("student_id") @db.VarChar(10)
+  passwordHash   String     @map("password_hash") @db.VarChar(255)
+  nickname       String     @db.VarChar(20)
+  name           String?    @db.VarChar(20)
+  college        String?    @db.VarChar(50)
+  phoneEncrypted Bytes?     @map("phone_encrypted") @db.VarBinary(255)
+  email          String?    @db.VarChar(100)
+  avatar         String?    @db.VarChar(500)
+  creditScore    Int        @default(70) @map("credit_score")
+  role           UserRole   @default(student)
+  showRealName   Boolean    @default(false) @map("show_real_name")
+  status         UserStatus @default(正常)
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+  lastLoginAt    DateTime?  @map("last_login_at")
+
+  demands         Demand[]
+  ordersAsPub     Order[]        @relation("OrderPublisher")
+  ordersAsProv    Order[]        @relation("OrderProvider")
+  reviewsFrom     Review[]       @relation("ReviewFrom")
+  reviewsTo       Review[]       @relation("ReviewTo")
+  notifications   Notification[]
+  messages        Message[]
+  disputes        Dispute[]
+  adminApps       AdminApplication[]  @relation("AdminApplicant")
+  adminReviews    AdminApplication[]  @relation("AdminReviewer")
+  refreshTokens   RefreshToken[]
+
+  @@index([nickname], name: "idx_nickname")
+  @@map("User")
+}
+
+model Demand {
+  id            Int            @id @default(autoincrement())
+  publisherId   Int            @map("publisher_id")
+  title         String         @db.VarChar(100)
+  description   String         @db.VarChar(2000)
+  category      DemandCategory
+  location      String?        @db.VarChar(200)
+  expectedTime  DateTime?      @map("expected_time")
+  reward        Decimal        @default(0.00) @db.Decimal(6, 2)
+  status        DemandStatus   @default(开放)
+  isUrgent      Boolean        @default(false) @map("is_urgent")
+  isAnonymous   Boolean        @default(false) @map("is_anonymous")
+  version       Int            @default(1)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  publisher User       @relation(fields: [publisherId], references: [id])
+  images    DemandImage[]
+  order     Order?
+
+  @@index([publisherId], name: "idx_publisher_id")
+  @@index([category], name: "idx_category")
+  @@index([status, createdAt], name: "idx_status_created")
+  @@index([status, category, createdAt], name: "idx_status_category_created")
+  @@fulltext([title, description], map: "ft_title_description")
+  @@map("Demand")
+}
+
+model DemandImage {
+  id        Int      @id @default(autoincrement())
+  demandId  Int      @map("demand_id")
+  url       String   @db.VarChar(500)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  demand Demand @relation(fields: [demandId], references: [id], onDelete: Cascade)
+
+  @@index([demandId], name: "idx_demand_id")
+  @@map("DemandImage")
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  demandId      Int         @unique @map("demand_id")
+  publisherId   Int         @map("publisher_id")
+  providerId    Int         @map("provider_id")
+  status        OrderStatus
+  reward        Decimal     @db.Decimal(6, 2)
+  isPaid        Boolean     @default(false) @map("is_paid")
+  version       Int         @default(1)
+  message       String?     @db.VarChar(500)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  completedAt   DateTime?   @map("completed_at")
+  cancelledAt   DateTime?   @map("cancelled_at")
+  cancelReason  String?     @map("cancel_reason") @db.VarChar(500)
+
+  demand    Demand    @relation(fields: [demandId], references: [id])
+  publisher User      @relation("OrderPublisher", fields: [publisherId], references: [id])
+  provider  User      @relation("OrderProvider", fields: [providerId], references: [id])
+  reviews   Review[]
+  messages  Message[]
+  disputes  Dispute[]
+
+  @@index([publisherId, status, createdAt], name: "idx_publisher_status_created")
+  @@index([providerId, status, createdAt], name: "idx_provider_status_created")
+  @@index([status], name: "idx_status")
+  @@map("Order")
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  orderId    Int      @map("order_id")
+  fromUserId Int      @map("from_user_id")
+  toUserId   Int      @map("to_user_id")
+  rating     Int      @db.TinyInt
+  content    String?  @db.VarChar(1000)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  order    Order @relation(fields: [orderId], references: [id])
+  fromUser User  @relation("ReviewFrom", fields: [fromUserId], references: [id])
+  toUser   User  @relation("ReviewTo", fields: [toUserId], references: [id])
+
+  @@unique([orderId, fromUserId], name: "uk_order_from_user")
+  @@index([toUserId], name: "idx_to_user_id")
+  @@map("Review")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  type      String   @db.VarChar(50)
+  title     String   @db.VarChar(200)
+  content   String   @db.Text
+  relatedId Int?     @map("related_id")
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead, createdAt], name: "idx_user_read_created")
+  @@map("Notification")
+}
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  orderId     Int      @map("order_id")
+  senderId    Int      @map("sender_id")
+  contentType String   @default("text") @map("content_type") @db.VarChar(10)
+  content     String   @db.VarChar(2000)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  order  Order @relation(fields: [orderId], references: [id])
+  sender User  @relation(fields: [senderId], references: [id])
+
+  @@index([orderId], name: "idx_order_id")
+  @@index([orderId, createdAt], name: "idx_order_created")
+  @@map("Message")
+}
+
+model Dispute {
+  id          Int      @id @default(autoincrement())
+  orderId     Int      @unique @map("order_id")
+  initiatorId Int      @map("initiator_id")
+  reason      String   @db.VarChar(2000)
+  evidence    Json?    @db.Json
+  status      String   @default("待处理") @db.VarChar(20)
+  resolution  String?  @db.VarChar(2000)
+  createdAt   DateTime @default(now()) @map("created_at")
+  resolvedAt  DateTime? @map("resolved_at")
+
+  order     Order @relation(fields: [orderId], references: [id])
+  initiator User  @relation(fields: [initiatorId], references: [id])
+
+  @@index([status], name: "idx_status")
+  @@map("Dispute")
+}
+
+model AdminApplication {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @unique @map("user_id")
+  reason        String   @db.VarChar(2000)
+  status        String   @default("待审批") @db.VarChar(20)
+  reviewerId    Int?     @map("reviewer_id")
+  reviewComment String?  @map("review_comment") @db.VarChar(500)
+  createdAt     DateTime @default(now()) @map("created_at")
+  reviewedAt    DateTime? @map("reviewed_at")
+
+  applicant User @relation("AdminApplicant", fields: [userId], references: [id])
+  reviewer  User? @relation("AdminReviewer", fields: [reviewerId], references: [id])
+
+  @@index([status], name: "idx_status")
+  @@map("AdminApplication")
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  tokenHash String   @unique @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId], name: "idx_user_id")
+  @@index([expiresAt], name: "idx_expires_at")
+  @@map("RefreshToken")
+}
