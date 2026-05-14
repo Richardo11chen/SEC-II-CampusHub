@@ -1,0 +1,19 @@
+{
+  "name": "campushub-backend",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["shared", "service-a"],
+  "scripts": {
+    "dev": "npm run dev -w service-a",
+    "dev:a": "npm run dev -w service-a",
+    "build": "npm run build -w shared && npm run build -w service-a",
+    "prisma:generate": "npm run prisma:generate -w shared",
+    "prisma:push": "npm run prisma:push -w shared",
+    "prisma:seed": "npm run prisma:seed -w shared",
+    "prisma:studio": "npm run prisma:studio -w shared"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.8.3"
+  }
+}
