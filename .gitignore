@@ -53,4 +53,6 @@ docker-compose.override.yml
 *.env.docker
 
 logs/
-*.logtoken.txt
+*.log
+
+token.txt
