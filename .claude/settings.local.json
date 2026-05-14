@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --import tsx -e \":*)",
+      "Read(//tmp/**)",
+      "Bash(pkill -f \"tsx\")",
+      "Bash(curl -s http://localhost:3002/api/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"\"studentId\"\":\"\"221250001\"\",\"\"password\"\":\"\"Test@123456\"\"}')",
+      "Bash(npx tsc:*)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(curl:*)",
+      "Bash(npx tsx -e \":*)",
+      "Bash(npx tsx:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQsInJvbGUiOiJzdHVkZW50IiwiaWF0IjoxNzc4NzUwNzY5LCJleHAiOjE3Nzg3NTQzNjl9.1CIFVDmV-iQQlFKmgItK3nLBI6GXXxKDrAzdGeBA-t0\")",
+      "Bash(__NEW_LINE_f117a4bc3a81f703__ echo:*)",
+      "Bash(netstat -ano)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
