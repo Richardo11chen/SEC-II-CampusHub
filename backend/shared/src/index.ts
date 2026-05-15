@@ -28,6 +28,8 @@ export type { TokenPayload } from './utils/jwt.js';
 
 export { hashPassword, comparePassword, validatePasswordFormat } from './utils/password.js';
 
+export { encryptPhone, decryptPhone, maskPhone } from './utils/crypto.js';
+
 export { default as logger } from './utils/logger.js';
 export { default as prisma } from './utils/prisma.js';
 
