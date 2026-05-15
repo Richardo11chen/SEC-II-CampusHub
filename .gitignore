@@ -56,3 +56,5 @@ logs/
 *.log
 
 token.txt
+
+**/.claude/
