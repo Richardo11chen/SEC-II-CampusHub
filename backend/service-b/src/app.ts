@@ -12,6 +12,7 @@ import morgan from 'morgan';
 import { errorHandler, generalLimiter, logger } from '@campushub/shared';
 import authRoutes from './routes/auth-routes.js';
 import userRoutes from './routes/user-routes.js';
+import uploadRoutes from './routes/upload-routes.js';
 
 const app = express();
 
@@ -22,6 +23,10 @@ app.use(generalLimiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/upload', uploadRoutes);
+
+const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+app.use('/uploads', express.static(UPLOAD_DIR));
 
 app.use((_req, res) => {
   res.status(404).json({ code: 404, message: '请求的资源不存在', data: null });
