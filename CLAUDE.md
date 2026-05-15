@@ -41,6 +41,8 @@ CampusHub (校园互助服务平台) — A campus mutual-help service platform w
 │           ├── controller/  # auth, user, upload
 │           ├── service/     # auth, user, upload
 │           ├── routes/      # auth, user, upload
+│           ├── middleware/   # upload
+│           ├── validators/   # zod schemas
 │           └── app.ts       # Express 5 entry
 ├── frontend/             # React 18 + TypeScript (Vite)
 │   └── src/
