@@ -6,10 +6,18 @@ function extractMessage(err: unknown, fallback: string): string {
   return resp?.response?.data?.message ?? fallback;
 }
 
+function normalizeDemand(d: Demand): Demand {
+  return { ...d, reward: Number(d.reward) };
+}
+
+function normalizeSummary(d: DemandSummary): DemandSummary {
+  return { ...d, reward: Number(d.reward) };
+}
+
 export async function createDemand(input: CreateDemandInput): Promise<{ data: Demand | null; error: string | null }> {
   try {
     const res = await api.post<ApiResponse<Demand>>('/demands', input);
-    return { data: res.data.data, error: null };
+    return { data: res.data.data ? normalizeDemand(res.data.data) : null, error: null };
   } catch (err: unknown) {
     return { data: null, error: extractMessage(err, '发布失败') };
   }
@@ -20,7 +28,13 @@ export async function getDemands(params?: DemandQueryParams): Promise<{
 }> {
   try {
     const res = await api.get<ApiResponse<PaginatedData<DemandSummary>>>('/demands', { params });
-    return { data: res.data.data, error: null };
+    if (res.data.data) {
+      return {
+        data: { ...res.data.data, items: res.data.data.items.map(normalizeSummary) },
+        error: null,
+      };
+    }
+    return { data: null, error: null };
   } catch (err: unknown) {
     return { data: null, error: extractMessage(err, '获取需求列表失败') };
   }
@@ -29,7 +43,7 @@ export async function getDemands(params?: DemandQueryParams): Promise<{
 export async function getDemand(id: number): Promise<{ data: Demand | null; error: string | null }> {
   try {
     const res = await api.get<ApiResponse<Demand>>(`/demands/${id}`);
-    return { data: res.data.data, error: null };
+    return { data: res.data.data ? normalizeDemand(res.data.data) : null, error: null };
   } catch (err: unknown) {
     return { data: null, error: extractMessage(err, '获取需求详情失败') };
   }

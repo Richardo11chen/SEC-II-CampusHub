@@ -96,6 +96,12 @@ export type DemandCategory =
 
 export type DemandStatus = '开放' | '进行中' | '已完成' | '已关闭';
 
+export interface DemandImage {
+  id: number;
+  url: string;
+  sortOrder: number;
+}
+
 export interface Demand {
   id: number;
   title: string;
@@ -107,11 +113,21 @@ export interface Demand {
   status: DemandStatus;
   isUrgent: boolean;
   isAnonymous: boolean;
-  images: string[];
-  publisher: PublicUserProfile;
+  images: DemandImage[];
+  publisher: {
+    id: number;
+    nickname: string;
+    avatar?: string | null;
+    creditScore: number;
+  };
   currentOrder?: {
     id: number;
-    provider: PublicUserProfile;
+    provider: {
+      id: number;
+      nickname: string;
+      avatar?: string | null;
+      creditScore: number;
+    };
   } | null;
   createdAt: string;
   updatedAt: string;
@@ -135,6 +151,11 @@ export interface DemandSummary {
   createdAt: string;
 }
 
+export interface DemandImageInput {
+  url: string;
+  sortOrder: number;
+}
+
 export interface CreateDemandInput {
   title: string;
   description: string;
@@ -144,7 +165,7 @@ export interface CreateDemandInput {
   reward?: number;
   isUrgent?: boolean;
   isAnonymous?: boolean;
-  images?: string[];
+  images?: string[] | DemandImageInput[];
 }
 
 export interface DemandQueryParams {

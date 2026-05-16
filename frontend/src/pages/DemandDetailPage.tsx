@@ -21,14 +21,14 @@ export default function DemandDetailPage() {
   const [demand, setDemand] = useState<Demand | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string>('');
 
   useEffect(() => {
     if (!id) return;
     getDemand(Number(id)).then((res) => {
       if (res.data) {
         setDemand(res.data);
-        if (res.data.images.length > 0) setSelectedImage(res.data.images[0]);
+        if (res.data.images.length > 0) setSelectedImage(res.data.images[0].url);
       } else {
         setError(res.error || '需求不存在');
       }
@@ -77,13 +77,13 @@ export default function DemandDetailPage() {
             <Box sx={{ display: 'flex', gap: 0.5, p: 1, overflow: 'auto' }}>
               {demand.images.map((img) => (
                 <Box
-                  key={img}
+                  key={img.id}
                   component="img"
-                  src={img}
-                  onClick={() => setSelectedImage(img)}
+                  src={img.url}
+                  onClick={() => setSelectedImage(img.url)}
                   sx={{
                     width: 64, height: 64, objectFit: 'cover', borderRadius: 1, cursor: 'pointer',
-                    border: selectedImage === img ? 2 : 0, borderColor: 'primary.main',
+                    border: selectedImage === img.url ? 2 : 0, borderColor: 'primary.main',
                   }}
                 />
               ))}
@@ -145,7 +145,7 @@ export default function DemandDetailPage() {
       {/* 发布者信息 */}
       <Card sx={{ mt: 2 }}>
         <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar src={publisher.avatar} sx={{ width: 48, height: 48, bgcolor: 'secondary.main' }}>
+          <Avatar src={publisher.avatar || undefined} sx={{ width: 48, height: 48, bgcolor: 'secondary.main' }}>
             {publisher.nickname[0]}
           </Avatar>
           <Box sx={{ flexGrow: 1 }}>
@@ -153,7 +153,7 @@ export default function DemandDetailPage() {
               {demand.isAnonymous ? '匿名用户' : publisher.nickname}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              信用分 {publisher.creditScore} · 加入于 {new Date(publisher.joinedAt).toLocaleDateString('zh-CN')}
+              信用分 {publisher.creditScore}
             </Typography>
           </Box>
           {!demand.isAnonymous && (

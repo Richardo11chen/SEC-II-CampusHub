@@ -60,7 +60,11 @@ export default function CreateDemandPage() {
     const err = validate();
     if (err) { setSnackbar({ open: true, message: err, severity: 'error' }); return; }
     setSaving(true);
-    const res = await createDemand({ ...form, reward: Number(form.reward), images });
+    const res = await createDemand({
+      ...form,
+      reward: Number(form.reward),
+      images: images.map((url, i) => ({ url, sortOrder: i })),
+    });
     setSaving(false);
     if (res.data) {
       setSnackbar({ open: true, message: '发布成功！', severity: 'success' });

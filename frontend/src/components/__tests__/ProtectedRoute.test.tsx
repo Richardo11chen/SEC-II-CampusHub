@@ -2,7 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthContext, type AuthContextType } from '@/store/authContext';
+import type { UserProfile } from '@/types';
 import ProtectedRoute from '../ProtectedRoute';
+
+const mockUser: UserProfile = {
+  id: 1, nickname: 'test', studentId: '2024000001',
+  creditScore: 70, role: 'student', showRealName: false,
+  createdAt: '2026-01-01T00:00:00Z',
+};
 
 function renderWithAuth(auth: Partial<AuthContextType>) {
   const mockAuth: AuthContextType = {
@@ -43,7 +50,7 @@ describe('ProtectedRoute', () => {
   });
 
   it('renders children when authenticated', () => {
-    renderWithAuth({ isAuthenticated: true, user: { id: 1, nickname: 'test', creditScore: 70, role: 'student' } as any });
+    renderWithAuth({ isAuthenticated: true, user: mockUser });
     expect(screen.getByText('受保护内容')).toBeInTheDocument();
   });
 });
