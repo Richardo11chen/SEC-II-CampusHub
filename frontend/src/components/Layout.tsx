@@ -46,7 +46,7 @@ export default function Layout() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {/* AppBar */}
-      <AppBar position="sticky" elevation={1}>
+      <AppBar position="sticky" elevation={0} sx={{ background: 'linear-gradient(135deg, #2563eb 0%, #059669 100%)' }}>
         <Toolbar>
           <Typography
             variant="h6"
