@@ -1,11 +1,31 @@
-# 配置仅供参考！
 stages:
+  - lint
   - build
+  - test
+
+frontend-lint:
+  stage: lint
+  image: node:lts
+  script:
+    - cd frontend
+    - npm install
+    - npm run lint
 
 frontend-build:
   stage: build
-  image: node:20
+  image: node:lts
   script:
     - cd frontend
     - npm install
     - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+
+frontend-test:
+  stage: test
+  image: node:lts
+  script:
+    - cd frontend
+    - npm install
+    - npm test
