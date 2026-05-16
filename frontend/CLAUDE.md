@@ -8,16 +8,49 @@ CampusHub (校园互助服务平台) — React + TypeScript + Vite + MUI v9 单�
 
 ## 当前状态（2026-05-16）
 
-前端项目骨架已搭建完毕 (`feat/frontend` 分支)，CI 流水线全部通过：
+前端A 任务全部完成，项目处于稳定可运行状态。
 
-- Vite 8 + React 19 + TypeScript 6 + MUI v9 + react-router-dom v7 + axios
-- Vitest 已配置，placeholder 测试通过
-- ESLint v10 flat config + typescript-eslint + react-hooks 插件
-- `@/` path alias 配置完成 (`./src/*`)
-- Vite proxy 已配置（服务端双端口代理）
-- GitLab CI: lint → build → test (node:lts, npm)
+| 任务 | 页面 | commit |
+|------|------|--------|
+| T05 | 基础架构（types/api/auth/Layout/路由） | `22fd804` |
+| T06/T07 | 注册 + 登录 | 同 T05 |
+| T09 | 个人资料（编辑/头像上传） | `372a30c` |
+| T14 | 发布需求（表单/分类/图片上传） | `a62c1fb` |
+| T16 | 需求详情（画廊/标签/发布者卡片） | `6619ac6` |
+| T28 | 用户公开主页（信用分/评价列表） | `ed0d098` |
+| T39 | 管理后台（5标签页全功能） | `0ffa68e` |
 
-**下一步**：开始开发 P0 前端页面（第一阶段任务 T05-T09）。
+总测试覆盖：**27 个测试**（5 文件：format、LoginPage、RegisterPage、ProtectedRoute、Layout）
+
+## 环境配置（本地开发）
+
+```bash
+# 1. 启动 Docker MySQL
+docker run -d --name campushub-mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=campushub -p 3306:3306 mysql:8.0
+
+# 2. 生成 Prisma + 建表
+cd backend
+npx prisma generate --schema=shared/prisma/schema.prisma
+npx prisma db push --schema=shared/prisma/schema.prisma
+
+# 3. 启动后端（两个服务分终端或 concurrently）
+node --import tsx/esm service-b/src/app.ts   # 3002
+node --import tsx/esm service-a/src/app.ts   # 3001
+
+# 4. 启动前端
+cd frontend && pnpm dev
+```
+
+> 注意：后端 npm workspace 在 Windows 上存在 `npx tsx` 寻址问题，使用 `node --import tsx/esm` 替代。
+
+## 重要经验
+
+- MUI v9 弃用了 `inputProps`/`InputLabelProps`，改用 `slotProps.htmlInput`/`slotProps.inputLabel`
+- MUI v9 Stack 不支持 `justifyContent`/`flexWrap` 作为直接 prop，需放入 `sx`
+- ESLint `react-hooks/set-state-in-effect` 规则严格禁止在 effect 中同步调用 setState，解决方案：用 lazy initializer 或移除多余的 setLoading(true)
+- 后端返回的 `reward` 是 string 类型，前端 API 层需用 `Number()` 转换
+- 后端返回的 `images` 是 `[{ id, url, sortOrder }]`，不是 `string[]`
+- GitLab CI `rules:changes` 对比的是 default branch（main），feat/frontend 与 main 差异大时所有 job 都会触发
 
 ## 开发环境
 
