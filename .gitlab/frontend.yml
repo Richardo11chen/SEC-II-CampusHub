@@ -8,16 +8,19 @@ frontend-lint:
   image: node:lts
   script:
     - cd frontend
-    - npm install
-    - npm run lint
+    - npm install -g pnpm
+    - pnpm ci
+    - pnpm lint
+    - pnpm check
 
 frontend-build:
   stage: build
   image: node:lts
   script:
     - cd frontend
-    - npm install
-    - npm run build
+    - npm install -g pnpm
+    - pnpm ci
+    - pnpm build
   artifacts:
     paths:
       - frontend/dist/
@@ -27,5 +30,6 @@ frontend-test:
   image: node:lts
   script:
     - cd frontend
-    - npm install
-    - npm test
+    - npm install -g pnpm
+    - pnpm ci
+    - pnpm test
