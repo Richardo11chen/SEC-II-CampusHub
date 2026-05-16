@@ -1,0 +1,16 @@
+import { Container, Typography, Box } from '@mui/material';
+
+export default function OrderListPage() {
+  return (
+    <Container>
+      <Box sx={{ textAlign: 'center', py: 8 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
+          我的订单
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          订单列表（T23 实现）
+        </Typography>
+      </Box>
+    </Container>
+  );
+}

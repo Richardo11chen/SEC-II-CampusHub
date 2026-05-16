@@ -96,4 +96,9 @@ Services import shared code via `@campushub/shared` (barrel export from `shared/
 ## Available Branches
 
 - `main` — base branch (documentation only)
-- `P0`, `P1`, `P2`, `P3`, `P4` — parallel phase branches (no code yet, P4 is active)
+- `P0`, `P1`, `P2`, `P3`, `P4` — parallel phase branches (P4 is active with complete backend)
+- `feat/frontend` — Frontend development branch (React + Vite + MUI, frontend A tasks completed)
+
+## Frontend Status (feat/frontend)
+
+All **前端A** tasks (T05-T09, T14, T16, T28, T39) are implemented and committed. See `frontend/CLAUDE.md` and `frontend/DEV_LOG.md` for details.
