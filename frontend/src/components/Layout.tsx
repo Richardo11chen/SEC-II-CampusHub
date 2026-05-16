@@ -31,7 +31,10 @@ export default function Layout() {
 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
-  const currentTab = NAV_ITEMS.findIndex((item) => location.pathname.startsWith(item.path));
+  const currentTab = NAV_ITEMS.findIndex((item) => {
+    if (item.path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(item.path);
+  });
 
   const handleNav = (_: unknown, index: number) => {
     navigate(NAV_ITEMS[index].path);
