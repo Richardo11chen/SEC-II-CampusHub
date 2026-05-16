@@ -13,6 +13,7 @@ import {
   Login as LoginIcon,
   Logout as LogoutIcon,
   Notifications as NotifIcon,
+  AdminPanelSettings as AdminIcon,
 } from '@mui/icons-material';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -81,6 +82,12 @@ export default function Layout() {
                   <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
                   <ListItemText>个人资料</ListItemText>
                 </MenuItem>
+                {user?.role === 'admin' && (
+                  <MenuItem onClick={() => { setAnchorEl(null); navigate('/admin'); }}>
+                    <ListItemIcon><AdminIcon fontSize="small" /></ListItemIcon>
+                    <ListItemText>管理后台</ListItemText>
+                  </MenuItem>
+                )}
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>
                   <ListItemText>退出登录</ListItemText>

@@ -12,10 +12,12 @@ import OrderListPage from '@/pages/OrderListPage';
 import OrderDetailPage from '@/pages/OrderDetailPage';
 import NotificationsPage from '@/pages/NotificationsPage';
 
+import AdminPage from '@/pages/AdminPage';
+
 export default function App() {
   return (
     <Routes>
-      {/* 公开路由（不使用 Layout 布局，如登录页自成一页） */}
+      {/* 公开路由 */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
@@ -33,6 +35,7 @@ export default function App() {
           <Route path="/orders" element={<OrderListPage />} />
           <Route path="/orders/:id" element={<OrderDetailPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Route>
       </Route>
     </Routes>
