@@ -19,4 +19,9 @@ export default defineConfig({
       '/api/orders': 'http://localhost:3001',
     },
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/utils/__tests__/setup.ts',
+  },
 })
