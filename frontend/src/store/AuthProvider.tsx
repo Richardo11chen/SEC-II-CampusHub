@@ -137,8 +137,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
   }, []);
 
+  const updateUser = useCallback((user: UserProfile) => {
+    setState((prev) => ({ ...prev, user }));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
