@@ -102,3 +102,21 @@ Services import shared code via `@campushub/shared` (barrel export from `shared/
 ## Frontend Status (feat/frontend)
 
 All **前端A** tasks (T05-T09, T14, T16, T28, T39) are implemented and committed. See `frontend/CLAUDE.md` and `frontend/DEV_LOG.md` for details.
+
+## Troubleshooting
+
+### Windows bash curl 中文 JSON 乱码
+
+Windows Git Bash / MSYS2 的 locale 不是 UTF-8，curl 直接传中文参数会导致编码错误，Zod 校验返回 400。
+
+**解决方案**：用 Node.js 写入临时 JSON 文件，curl 用 `-d @文件路径` 读取：
+
+```bash
+node -e "process.stdout.write(JSON.stringify({reason:'申诉原因'}))" > /tmp/body.json
+curl -X POST http://localhost:3001/api/orders/1/dispute \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <token>' \
+  -d @/tmp/body.json
+```
+
+也可以先用纯英文做快速验证，再换 GUI 工具（Postman/Hoppscotch）测中文场景。
