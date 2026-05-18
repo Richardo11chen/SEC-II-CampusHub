@@ -1,5 +1,5 @@
 import { OrderStatus, DemandStatus } from '@prisma/client';
-import { orderRepository, demandRepository, userRepository, disputeRepository, prisma, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@campushub/shared';
+import { orderRepository, demandRepository, userRepository, disputeRepository, noShowRecordRepository, prisma, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@campushub/shared';
 import type { OrderFilter } from '@campushub/shared';
 
 export const orderService = {
@@ -28,6 +28,10 @@ export const orderService = {
     }
     if (user.creditScore < 40) {
       throw new ForbiddenError('信用分不足40，无法接单');
+    }
+
+    if (user.restrictedUntil && user.restrictedUntil > new Date()) {
+      throw new ForbiddenError(`因频繁爽约，您已被限制接单，截止时间：${user.restrictedUntil.toLocaleString('zh-CN')}`);
     }
 
     const order = await prisma.$transaction(async (tx) => {
@@ -139,12 +143,16 @@ export const orderService = {
       throw new BadRequestError('当前订单状态不允许取消');
     }
 
+    const isProviderCancel = userId === order.providerId;
+    const now = new Date();
+
     const result = await prisma.$transaction(async (tx) => {
       const count = await tx.order.updateMany({
         where: { id: orderId, version: order.version },
         data: {
           status: OrderStatus['已取消'],
-          cancelledAt: new Date(),
+          cancelledAt: now,
+          cancelledBy: isProviderCancel ? 'provider' : 'publisher',
           cancelReason: cancelReason || null,
           version: { increment: 1 },
         },
@@ -159,6 +167,36 @@ export const orderService = {
         data: { status: DemandStatus['开放'] },
       });
 
+      if (isProviderCancel) {
+        // 服务方爽约：扣信用分10分
+        await tx.user.update({
+          where: { id: order.providerId, creditScore: { gte: 10 } },
+          data: { creditScore: { decrement: 10 } },
+        });
+
+        // 记录爽约
+        await tx.noShowRecord.create({
+          data: { userId: order.providerId, orderId },
+        });
+
+        // 30天内累计>=3次 → 限制接单15天
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const noShowCount = await tx.noShowRecord.count({
+          where: {
+            userId: order.providerId,
+            createdAt: { gte: thirtyDaysAgo },
+          },
+        });
+
+        if (noShowCount >= 3) {
+          const restrictedUntil = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
+          await tx.user.update({
+            where: { id: order.providerId },
+            data: { restrictedUntil },
+          });
+        }
+      }
+
       return tx.order.findUnique({
         where: { id: orderId },
         select: {
@@ -169,6 +207,7 @@ export const orderService = {
           status: true,
           reward: true,
           cancelledAt: true,
+          cancelledBy: true,
           cancelReason: true,
           demand: {
             select: {

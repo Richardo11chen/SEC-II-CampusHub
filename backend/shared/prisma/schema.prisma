@@ -57,10 +57,11 @@ model User {
   creditScore    Int        @default(70) @map("credit_score")
   role           UserRole   @default(student)
   showRealName   Boolean    @default(false) @map("show_real_name")
-  status         UserStatus @default(正常)
-  createdAt      DateTime   @default(now()) @map("created_at")
-  updatedAt      DateTime   @updatedAt @map("updated_at")
-  lastLoginAt    DateTime?  @map("last_login_at")
+  status          UserStatus  @default(正常)
+  restrictedUntil DateTime?   @map("restricted_until")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  lastLoginAt     DateTime?   @map("last_login_at")
 
   demands         Demand[]
   ordersAsPub     Order[]        @relation("OrderPublisher")
@@ -73,6 +74,7 @@ model User {
   adminApps       AdminApplication[]  @relation("AdminApplicant")
   adminReviews    AdminApplication[]  @relation("AdminReviewer")
   refreshTokens   RefreshToken[]
+  noShowRecords   NoShowRecord[]
 
   @@index([nickname], name: "idx_nickname")
   @@map("User")
@@ -132,14 +134,16 @@ model Order {
   createdAt     DateTime    @default(now()) @map("created_at")
   completedAt   DateTime?   @map("completed_at")
   cancelledAt   DateTime?   @map("cancelled_at")
+  cancelledBy   String?     @map("cancelled_by") @db.VarChar(10)
   cancelReason  String?     @map("cancel_reason") @db.VarChar(500)
 
   demand    Demand    @relation(fields: [demandId], references: [id])
   publisher User      @relation("OrderPublisher", fields: [publisherId], references: [id])
   provider  User      @relation("OrderProvider", fields: [providerId], references: [id])
-  reviews   Review[]
-  messages  Message[]
-  disputes  Dispute[]
+  reviews      Review[]
+  messages     Message[]
+  disputes     Dispute[]
+  noShowRecord NoShowRecord?
 
   @@index([publisherId, status, createdAt], name: "idx_publisher_status_created")
   @@index([providerId, status, createdAt], name: "idx_provider_status_created")
@@ -245,4 +249,16 @@ model RefreshToken {
   @@index([userId], name: "idx_user_id")
   @@index([expiresAt], name: "idx_expires_at")
   @@map("RefreshToken")
+}
+
+model NoShowRecord {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  orderId   Int      @unique @map("order_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id])
+
+  @@index([userId, createdAt], name: "idx_user_created")
+  @@map("NoShowRecord")
 }

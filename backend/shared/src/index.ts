@@ -56,5 +56,6 @@ export type { OrderFilter } from './repository/order-repository.js';
 export { refreshTokenRepository } from './repository/refresh-token-repository.js';
 export { demandImageRepository } from './repository/demand-image-repository.js';
 export { disputeRepository } from './repository/dispute-repository.js';
+export { noShowRecordRepository } from './repository/no-show-record-repository.js';
 
 // ── Types (side-effect: extends Express.Request, picked up via tsconfig include) ──

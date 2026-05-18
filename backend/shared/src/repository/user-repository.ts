@@ -12,6 +12,7 @@ const userPublicSelect = {
   role: true,
   showRealName: true,
   status: true,
+  restrictedUntil: true,
   createdAt: true,
   updatedAt: true,
   lastLoginAt: true,
