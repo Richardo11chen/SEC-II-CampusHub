@@ -12,6 +12,7 @@ import morgan from 'morgan';
 import { errorHandler, generalLimiter, logger } from '@campushub/shared';
 import demandRoutes from './routes/demand-routes.js';
 import orderRoutes from './routes/order-routes.js';
+import { initExpiredDemandCleanup } from './scheduler/expired-demand-cleanup.js';
 
 const app = express();
 
@@ -33,6 +34,7 @@ const PORT = parseInt(process.env.SERVICE_A_PORT || '3001', 10);
 
 app.listen(PORT, () => {
   logger.info(`CampusHub Service A (demand + order) running on port ${PORT}`);
+  initExpiredDemandCleanup();
 });
 
 export default app;

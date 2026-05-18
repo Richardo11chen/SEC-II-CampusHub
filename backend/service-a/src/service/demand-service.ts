@@ -1,4 +1,4 @@
-import { demandRepository, demandImageRepository, userRepository, NotFoundError, ForbiddenError, ConflictError } from '@campushub/shared';
+import { demandRepository, demandImageRepository, NotFoundError, ForbiddenError, ConflictError } from '@campushub/shared';
 import type { DemandFilter } from '@campushub/shared';
 import { DemandCategory, DemandStatus } from '@prisma/client';
 
@@ -17,15 +17,6 @@ export const demandService = {
       images?: { url: string; sortOrder: number }[];
     },
   ) {
-    const user = await userRepository.findById(userId);
-    if (!user) {
-      throw new NotFoundError('用户不存在');
-    }
-
-    if (user.creditScore < 40) {
-      throw new ForbiddenError('信用分不足40，无法发布需求');
-    }
-
     const createData = {
       publisher: { connect: { id: userId } },
       title: data.title,

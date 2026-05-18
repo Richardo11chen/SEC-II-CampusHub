@@ -45,6 +45,7 @@ export {
   generalLimiter,
 } from './middleware/rate-limiter.js';
 export { validate } from './middleware/validate.js';
+export { checkMinCredit } from './middleware/credit-check.js';
 
 // ── Repository ──
 export { userRepository } from './repository/user-repository.js';
@@ -54,5 +55,6 @@ export { orderRepository } from './repository/order-repository.js';
 export type { OrderFilter } from './repository/order-repository.js';
 export { refreshTokenRepository } from './repository/refresh-token-repository.js';
 export { demandImageRepository } from './repository/demand-image-repository.js';
+export { disputeRepository } from './repository/dispute-repository.js';
 
 // ── Types (side-effect: extends Express.Request, picked up via tsconfig include) ──

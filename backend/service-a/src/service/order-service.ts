@@ -1,5 +1,5 @@
 import { OrderStatus, DemandStatus } from '@prisma/client';
-import { orderRepository, demandRepository, userRepository, prisma, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@campushub/shared';
+import { orderRepository, demandRepository, userRepository, disputeRepository, prisma, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@campushub/shared';
 import type { OrderFilter } from '@campushub/shared';
 
 export const orderService = {
@@ -123,6 +123,130 @@ export const orderService = {
     }
 
     return orderRepository.findById(orderId);
+  },
+
+  async cancelOrder(orderId: number, userId: number, cancelReason?: string) {
+    const order = await orderRepository.findById(orderId);
+    if (!order) {
+      throw new NotFoundError('订单不存在');
+    }
+
+    if (order.publisherId !== userId && order.providerId !== userId) {
+      throw new ForbiddenError('无权取消该订单');
+    }
+
+    if (order.status !== OrderStatus['进行中']) {
+      throw new BadRequestError('当前订单状态不允许取消');
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const count = await tx.order.updateMany({
+        where: { id: orderId, version: order.version },
+        data: {
+          status: OrderStatus['已取消'],
+          cancelledAt: new Date(),
+          cancelReason: cancelReason || null,
+          version: { increment: 1 },
+        },
+      });
+
+      if (count.count === 0) {
+        throw new ConflictError('订单已被修改，请刷新后重试');
+      }
+
+      await tx.demand.update({
+        where: { id: order.demandId },
+        data: { status: DemandStatus['开放'] },
+      });
+
+      return tx.order.findUnique({
+        where: { id: orderId },
+        select: {
+          id: true,
+          demandId: true,
+          publisherId: true,
+          providerId: true,
+          status: true,
+          reward: true,
+          cancelledAt: true,
+          cancelReason: true,
+          demand: {
+            select: {
+              id: true,
+              title: true,
+              category: true,
+              status: true,
+            },
+          },
+        },
+      });
+    });
+
+    return result;
+  },
+
+  async createDispute(orderId: number, userId: number, reason: string) {
+    const order = await orderRepository.findById(orderId);
+    if (!order) {
+      throw new NotFoundError('订单不存在');
+    }
+
+    if (order.publisherId !== userId && order.providerId !== userId) {
+      throw new ForbiddenError('无权对该订单发起申诉');
+    }
+
+    if (order.status !== OrderStatus['进行中'] && order.status !== OrderStatus['待确认']) {
+      throw new BadRequestError('当前订单状态不允许发起申诉');
+    }
+
+    const existing = await disputeRepository.findByOrderId(orderId);
+    if (existing) {
+      throw new ConflictError('该订单已有申诉在处理中');
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const count = await tx.order.updateMany({
+        where: { id: orderId, version: order.version },
+        data: {
+          status: OrderStatus['纠纷中'],
+          version: { increment: 1 },
+        },
+      });
+
+      if (count.count === 0) {
+        throw new ConflictError('订单已被修改，请刷新后重试');
+      }
+
+      await tx.dispute.create({
+        data: {
+          orderId,
+          initiatorId: userId,
+          reason,
+        },
+      });
+
+      return tx.order.findUnique({
+        where: { id: orderId },
+        select: {
+          id: true,
+          demandId: true,
+          publisherId: true,
+          providerId: true,
+          status: true,
+          reward: true,
+          disputes: {
+            select: {
+              id: true,
+              reason: true,
+              status: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+    });
+
+    return result;
   },
 
   async confirmComplete(orderId: number, userId: number) {

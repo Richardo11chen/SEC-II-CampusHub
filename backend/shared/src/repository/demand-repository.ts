@@ -94,6 +94,9 @@ export const demandRepository = {
       ];
     }
 
+    // 紧急需求优先排在前面
+    orderBy.push({ isUrgent: 'desc' });
+
     switch (sortBy) {
       case 'oldest':
         orderBy.push({ createdAt: 'asc' });
