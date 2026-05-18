@@ -37,7 +37,7 @@ export const demandController = {
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const id = Number(req.params.id);
-      const demand = await demandService.getDemandDetail(id);
+      const demand = await demandService.getDemandDetail(id, req.user?.userId);
       successResponse(res, demand);
     } catch (error) {
       next(error);

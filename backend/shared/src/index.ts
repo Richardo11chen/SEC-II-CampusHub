@@ -30,6 +30,9 @@ export { hashPassword, comparePassword, validatePasswordFormat } from './utils/p
 
 export { encryptPhone, decryptPhone, maskPhone } from './utils/crypto.js';
 
+export { notifyOrderTaken, notifyOrderCompleted, notifyOrderConfirmed, notifyOrderCancelled, notifyReviewReceived } from './utils/notification-helper.js';
+export { resolvePublisher } from './utils/anonymous-helper.js';
+
 export { default as logger } from './utils/logger.js';
 export { default as prisma } from './utils/prisma.js';
 
@@ -57,5 +60,7 @@ export { refreshTokenRepository } from './repository/refresh-token-repository.js
 export { demandImageRepository } from './repository/demand-image-repository.js';
 export { disputeRepository } from './repository/dispute-repository.js';
 export { noShowRecordRepository } from './repository/no-show-record-repository.js';
+export { reviewRepository } from './repository/review-repository.js';
+export { notificationRepository } from './repository/notification-repository.js';
 
 // ── Types (side-effect: extends Express.Request, picked up via tsconfig include) ──

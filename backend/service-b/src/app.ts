@@ -13,6 +13,9 @@ import { errorHandler, generalLimiter, logger } from '@campushub/shared';
 import authRoutes from './routes/auth-routes.js';
 import userRoutes from './routes/user-routes.js';
 import uploadRoutes from './routes/upload-routes.js';
+import reviewRoutes from './routes/review-routes.js';
+import notificationRoutes from './routes/notification-routes.js';
+import adminRoutes from './routes/admin-routes.js';
 
 const app = express();
 
@@ -24,6 +27,9 @@ app.use(generalLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 app.use('/uploads', express.static(UPLOAD_DIR));

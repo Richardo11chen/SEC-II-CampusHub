@@ -3,6 +3,7 @@ import {
   maskPhone,
   encryptPhone,
   decryptPhone,
+  reviewRepository,
 } from '@campushub/shared';
 
 export const userService = {
@@ -71,6 +72,46 @@ export const userService = {
     });
 
     return this.getProfile(userId);
+  },
+
+  async getPublicProfile(userId: number) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        nickname: true,
+        name: true,
+        college: true,
+        avatar: true,
+        creditScore: true,
+        showRealName: true,
+        createdAt: true,
+      },
+    });
+    if (!user) return null;
+
+    const [orderCount, reviewStats] = await Promise.all([
+      prisma.order.count({ where: { providerId: userId, status: '已完成' } }),
+      reviewRepository.getStats(userId),
+    ]);
+
+    return {
+      id: user.id,
+      nickname: user.nickname,
+      name: user.showRealName ? user.name : null,
+      college: user.college,
+      avatar: user.avatar,
+      creditScore: user.creditScore,
+      totalOrders: orderCount,
+      averageRating: reviewStats.averageRating,
+      totalReviews: reviewStats.totalReviews,
+      joinedAt: user.createdAt,
+    };
+  },
+
+  async getUserReviews(userId: number, page: number, pageSize: number) {
+    const { items, total } = await reviewRepository.findByToUser(userId, page, pageSize);
+    return { items, total, page, pageSize };
   },
 };
 

@@ -1,4 +1,4 @@
-import { demandRepository, demandImageRepository, NotFoundError, ForbiddenError, ConflictError } from '@campushub/shared';
+import { demandRepository, demandImageRepository, NotFoundError, ForbiddenError, ConflictError, resolvePublisher } from '@campushub/shared';
 import type { DemandFilter } from '@campushub/shared';
 import { DemandCategory, DemandStatus } from '@prisma/client';
 
@@ -46,11 +46,22 @@ export const demandService = {
     return demandRepository.findMany(filter);
   },
 
-  async getDemandDetail(id: number) {
+  async getDemandDetail(id: number, currentUserId?: number) {
     const demand = await demandRepository.findById(id);
     if (!demand) {
       throw new NotFoundError('需求不存在');
     }
+
+    if (demand.isAnonymous) {
+      const resolved = await resolvePublisher(
+        { id: demand.id, publisherId: demand.publisherId, isAnonymous: demand.isAnonymous },
+        currentUserId,
+      );
+      if (resolved) {
+        demand.publisher = resolved;
+      }
+    }
+
     return demand;
   },
 
