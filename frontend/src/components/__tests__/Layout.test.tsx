@@ -8,7 +8,7 @@ import Layout from '../Layout';
 
 const mockUser: UserProfile = {
   id: 1, nickname: '测试用户', studentId: '2024123456',
-  creditScore: 70, role: 'student', showRealName: false,
+  creditScore: 70, role: 'student', status: '正常', showRealName: false,
   createdAt: '2026-01-01T00:00:00Z',
 };
 

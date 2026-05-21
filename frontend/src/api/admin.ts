@@ -10,10 +10,12 @@ function extractMessage(err: unknown, fallback: string): string {
 
 export interface AdminStatistics {
   totalUsers: number;
-  totalDemands: number;
+  dailyActiveUsers: number;
   totalOrders: number;
+  completedOrders: number;
   pendingDisputes: number;
-  pendingApplications: number;
+  categoryDistribution: Record<string, number>;
+  dailyNewUsers: { date: string; count: number }[];
 }
 
 export interface AdminDispute {
@@ -58,9 +60,9 @@ export async function getAdminUsers(page = 1): Promise<{ data: PaginatedData<Use
   }
 }
 
-export async function toggleUserStatus(userId: number): Promise<{ data: null; error: string | null }> {
+export async function toggleUserStatus(userId: number, action: 'disable' | 'enable'): Promise<{ data: null; error: string | null }> {
   try {
-    await api.put(`/admin/users/${userId}/status`);
+    await api.put(`/admin/users/${userId}/status`, { action });
     return { data: null, error: null };
   } catch (err: unknown) {
     return { data: null, error: extractMessage(err, '操作失败') };
@@ -94,9 +96,9 @@ export async function getDisputes(page = 1): Promise<{ data: PaginatedData<Admin
   }
 }
 
-export async function resolveDispute(disputeId: number, resolution: string): Promise<{ data: null; error: string | null }> {
+export async function resolveDispute(disputeId: number, resolution: string, action: string): Promise<{ data: null; error: string | null }> {
   try {
-    await api.put(`/admin/disputes/${disputeId}/resolve`, { resolution });
+    await api.put(`/admin/disputes/${disputeId}/resolve`, { resolution, action });
     return { data: null, error: null };
   } catch (err: unknown) {
     return { data: null, error: extractMessage(err, '处理失败') };
@@ -112,9 +114,9 @@ export async function getApplications(page = 1): Promise<{ data: PaginatedData<A
   }
 }
 
-export async function reviewApplication(applicationId: number, status: '已通过' | '已拒绝', comment?: string): Promise<{ data: null; error: string | null }> {
+export async function reviewApplication(applicationId: number, action: 'approve' | 'reject', reason?: string): Promise<{ data: null; error: string | null }> {
   try {
-    await api.put(`/admin/applications/${applicationId}/review`, { status, comment });
+    await api.put(`/admin/applications/${applicationId}/review`, { action, reason });
     return { data: null, error: null };
   } catch (err: unknown) {
     return { data: null, error: extractMessage(err, '审批失败') };

@@ -31,51 +31,117 @@ export default function LoginPage() {
   };
 
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}>
-      <Card sx={{ width: '100%', maxWidth: 400 }}>
-        <CardContent sx={{ p: 4 }}>
-          <Typography variant="h5" sx={{ mb: 1, fontWeight: 700, textAlign: 'center' }}>
-            登录
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: { xs: 'column', md: 'row' },
+      }}
+    >
+      {/* 左侧装饰区 — 南大紫 */}
+      <Box
+        sx={{
+          bgcolor: 'primary.main',
+          color: '#fff',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          p: 4,
+          flex: { md: '0 0 42%' },
+          minHeight: { xs: 140, md: '100vh' },
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* 装饰性梧桐叶圆点图案 */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: -90, right: -90,
+            width: 375, height: 375,
+            borderRadius: '50%',
+            bgcolor: 'primary.dark',
+            opacity: 0.35,
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: -60, left: -60,
+            width: 240, height: 240,
+            borderRadius: '50%',
+            bgcolor: 'primary.light',
+            opacity: 0.25,
+          }}
+        />
+        <Box sx={{ position: 'relative', textAlign: 'center' }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '0.05em', mb: 1 }}>
+            CampusHub
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
-            欢迎回到 CampusHub
+          <Typography variant="body1" sx={{ opacity: 0.85, fontWeight: 400 }}>
+            校园互助服务平台
           </Typography>
+        </Box>
+      </Box>
 
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {/* 右侧表单 */}
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          p: 3,
+          bgcolor: 'background.default',
+        }}
+      >
+        <Card sx={{ width: '100%', maxWidth: 560, borderRadius: 0 }}>
+          <CardContent sx={{ p: { xs: 4, sm: 5 } }}>
+            <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>
+              登录
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+              欢迎回到 CampusHub
+            </Typography>
 
-          <TextField
-            label="学号"
-            fullWidth
-            value={form.studentId}
-            onChange={(e) => setForm({ ...form, studentId: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="密码"
-            type="password"
-            fullWidth
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            sx={{ mb: 3 }}
-          />
-          <Button
-            variant="contained"
-            fullWidth
-            size="large"
-            onClick={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? '登录中…' : '登录'}
-          </Button>
+            {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>}
 
-          <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
-            还没有账号？
-            <Link component={RouterLink} to="/register" underline="hover">
-              立即注册
-            </Link>
-          </Typography>
-        </CardContent>
-      </Card>
+            <TextField
+              label="学号"
+              fullWidth
+              value={form.studentId}
+              onChange={(e) => setForm({ ...form, studentId: e.target.value })}
+              sx={{ mb: 3 }}
+            />
+            <TextField
+              label="密码"
+              type="password"
+              fullWidth
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              sx={{ mb: 4 }}
+            />
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              onClick={handleSubmit}
+              disabled={loading}
+              sx={{ py: 1.8, fontSize: '1.1rem' }}
+            >
+              {loading ? '登录中…' : '登录'}
+            </Button>
+
+            <Typography variant="body1" sx={{ mt: 3, textAlign: 'center' }}>
+              还没有账号？
+              <Link component={RouterLink} to="/register" underline="hover" color="secondary" fontWeight={600}>
+                立即注册
+              </Link>
+            </Typography>
+          </CardContent>
+        </Card>
+      </Box>
     </Box>
   );
 }

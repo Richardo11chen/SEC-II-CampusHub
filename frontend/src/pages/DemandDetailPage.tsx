@@ -157,9 +157,10 @@ export default function DemandDetailPage() {
           {canTake && (
             <Button
               variant="contained"
+              color="secondary"
               fullWidth
               size="large"
-              sx={{ mt: 1 }}
+              sx={{ mt: 1, py: 1.5, fontSize: '1rem' }}
               onClick={handleTakeOrder}
               loading={takingOrder}
             >
@@ -170,9 +171,12 @@ export default function DemandDetailPage() {
       </Card>
 
       {/* 发布者信息 */}
-      <Card sx={{ mt: 2 }}>
-        <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar src={publisher.avatar || undefined} sx={{ width: 48, height: 48, bgcolor: 'secondary.main' }}>
+      <Card sx={{ mt: 2, overflow: 'hidden', position: 'relative', '&::before': { content: '""', position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, bgcolor: 'primary.main' } }}>
+        <CardContent sx={{ p: 3, pl: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Avatar
+            src={publisher.avatar || undefined}
+            sx={{ width: 48, height: 48, bgcolor: 'secondary.main', fontWeight: 600 }}
+          >
             {publisher.nickname[0]}
           </Avatar>
           <Box sx={{ flexGrow: 1 }}>

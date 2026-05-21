@@ -81,7 +81,13 @@ export default function ProfilePage() {
       {/* 头像 & 昵称 */}
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4, position: 'relative' }}>
         <Box sx={{ position: 'relative' }}>
-          <Avatar src={user.avatar} sx={{ width: 88, height: 88, mb: 2, bgcolor: 'secondary.main', fontSize: 36 }}>
+          <Avatar
+            src={user.avatar}
+            sx={{
+              width: 88, height: 88, mb: 2, bgcolor: 'secondary.main', fontSize: 36,
+              boxShadow: '0 0 0 4px #fff, 0 0 0 6px #6B2FA0',
+            }}
+          >
             {user.nickname[0]}
           </Avatar>
           {uploading && (

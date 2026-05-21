@@ -7,21 +7,24 @@ import {
 } from '@mui/material';
 import {
   Home as HomeIcon,
+  HomeOutlined as HomeOutlinedIcon,
   AddCircleOutlined as AddIcon,
   ListAlt as OrdersIcon,
+  ListAltOutlined as OrdersOutlinedIcon,
   Person as PersonIcon,
+  PersonOutlined as PersonOutlinedIcon,
   Login as LoginIcon,
   Logout as LogoutIcon,
-  Notifications as NotifIcon,
+  NotificationsOutlined as NotifIcon,
   AdminPanelSettings as AdminIcon,
 } from '@mui/icons-material';
 import { useAuth } from '@/hooks/useAuth';
 
 const NAV_ITEMS = [
-  { label: '首页', icon: <HomeIcon />, path: '/' },
-  { label: '发布', icon: <AddIcon />, path: '/demands/new' },
-  { label: '订单', icon: <OrdersIcon />, path: '/orders' },
-  { label: '我的', icon: <PersonIcon />, path: '/users/me' },
+  { label: '首页', icon: <HomeOutlinedIcon />, activeIcon: <HomeIcon />, path: '/' },
+  { label: '发布', icon: <AddIcon />, activeIcon: <AddIcon />, path: '/demands/new' },
+  { label: '订单', icon: <OrdersOutlinedIcon />, activeIcon: <OrdersIcon />, path: '/orders' },
+  { label: '我的', icon: <PersonOutlinedIcon />, activeIcon: <PersonIcon />, path: '/users/me' },
 ];
 
 export default function Layout() {
@@ -48,12 +51,25 @@ export default function Layout() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {/* AppBar */}
-      <AppBar position="sticky" elevation={0} sx={{ background: 'linear-gradient(135deg, #2563eb 0%, #059669 100%)' }}>
-        <Toolbar>
+      {/* AppBar — 南大紫 */}
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: 'primary.main',
+          borderBottom: 'none',
+        }}
+      >
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 56 } }}>
           <Typography
             variant="h6"
-            sx={{ flexGrow: 1, cursor: 'pointer', fontWeight: 700 }}
+            sx={{
+              flexGrow: 1,
+              cursor: 'pointer',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              fontSize: { xs: '1.1rem', sm: '1.25rem' },
+            }}
             onClick={() => navigate('/')}
           >
             CampusHub
@@ -61,11 +77,29 @@ export default function Layout() {
 
           {isAuthenticated ? (
             <>
-              <IconButton color="inherit" size="small" sx={{ mr: 1 }} onClick={() => navigate('/notifications')}>
+              <IconButton
+                color="inherit"
+                size="small"
+                sx={{ mr: 0.5, transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.1)' } }}
+                onClick={() => navigate('/notifications')}
+              >
                 <NotifIcon />
               </IconButton>
-              <IconButton size="small" onClick={(e: MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget)}>
-                <Avatar src={user?.avatar} sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+              <IconButton
+                size="small"
+                onClick={(e: MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget)}
+                sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.05)' } }}
+              >
+                <Avatar
+                  src={user?.avatar}
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    bgcolor: 'secondary.main',
+                    fontSize: 14,
+                    fontWeight: 600,
+                  }}
+                >
                   {user?.nickname?.[0]}
                 </Avatar>
               </IconButton>
@@ -74,6 +108,8 @@ export default function Layout() {
                 open={Boolean(anchorEl)}
                 onClose={() => setAnchorEl(null)}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: -6, horizontal: 'right' }}
+                slotProps={{ paper: { sx: { borderRadius: 3, mt: 0.5, minWidth: 180 } } }}
               >
                 <MenuItem disabled>
                   <Typography variant="body2" color="text.secondary">
@@ -105,21 +141,68 @@ export default function Layout() {
         </Toolbar>
       </AppBar>
 
-      {/* 内容区 */}
-      <Container component="main" sx={{ flexGrow: 1, py: 2, pb: 9 }}>
-        <Outlet />
-      </Container>
+      {/* 内容区 — 带淡入动画 */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          py: 2,
+          pb: 9,
+          animation: 'fadeInUp 0.35s ease',
+          '@keyframes fadeInUp': {
+            from: { opacity: 0, transform: 'translateY(12px)' },
+            to: { opacity: 1, transform: 'translateY(0)' },
+          },
+        }}
+      >
+        <Container>
+          <Outlet />
+        </Container>
+      </Box>
 
-      {/* 底部导航 */}
+      {/* 底部导航 — 白底 + 选中态紫色圆点 */}
       <Box sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1100 }}>
         <BottomNavigation
           value={currentTab >= 0 ? currentTab : 0}
           onChange={handleNav}
           showLabels
+          sx={{
+            backgroundColor: 'background.paper',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+          }}
         >
-          {NAV_ITEMS.map((item) => (
-            <BottomNavigationAction key={item.path} label={item.label} icon={item.icon} />
-          ))}
+          {NAV_ITEMS.map((item, index) => {
+            const active = currentTab === index;
+            return (
+              <BottomNavigationAction
+                key={item.path}
+                label={item.label}
+                icon={
+                  <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {active ? item.activeIcon : item.icon}
+                    {active && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: -10,
+                          width: 4,
+                          height: 4,
+                          borderRadius: '50%',
+                          bgcolor: 'primary.main',
+                        }}
+                      />
+                    )}
+                  </Box>
+                }
+                sx={{
+                  '&.Mui-selected': {
+                    color: 'primary.main',
+                  },
+                }}
+              />
+            );
+          })}
         </BottomNavigation>
       </Box>
     </Box>

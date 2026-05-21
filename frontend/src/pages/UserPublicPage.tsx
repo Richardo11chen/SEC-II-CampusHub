@@ -66,8 +66,13 @@ export default function UserPublicPage() {
           {profile.name && (
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{profile.name}</Typography>
           )}
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 1, gap: 0.5 }}>
+            <Typography variant="h3" sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1 }}>
+              {profile.creditScore}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">信用分</Typography>
+          </Box>
           <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-            <Chip label={`信用分 ${profile.creditScore}`} color="primary" size="small" />
             <Chip label={`${profile.totalOrders} 单`} variant="outlined" size="small" />
           </Box>
           {profile.college && (

@@ -7,7 +7,7 @@ import {
 import { getOrders } from '@/api/orders';
 import { formatReward, formatRelativeTime, orderStatusColor } from '@/utils/format';
 import { ORDER_STATUSES } from '@/types';
-import type { Order, PaginatedData } from '@/types';
+import type { Order, OrderStatus, PaginatedData } from '@/types';
 
 const ALL = '全部';
 const PAGE_SIZE = 10;
@@ -21,19 +21,19 @@ export default function OrderListPage() {
   const navigate = useNavigate();
 
   const [role, setRole] = useState<'publisher' | 'provider'>('publisher');
-  const [statusFilter, setStatus] = useState<string>(ALL);
+  const [statusFilter, setStatus] = useState<OrderStatus | typeof ALL>(ALL);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<PaginatedData<Order> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const params: { role: string; page: number; pageSize: number; status?: string } = {
+    const params = {
       role,
       page,
       pageSize: PAGE_SIZE,
+      ...(statusFilter !== ALL ? { status: statusFilter } : {}),
     };
-    if (statusFilter !== ALL) params.status = statusFilter;
 
     getOrders(params)
       .then((res) => {
@@ -55,7 +55,7 @@ export default function OrderListPage() {
     setPage(1);
   };
 
-  const handleStatusChange = (newStatus: string) => {
+  const handleStatusChange = (newStatus: OrderStatus | typeof ALL) => {
     setLoading(true);
     setStatus(newStatus);
     setPage(1);
@@ -80,7 +80,7 @@ export default function OrderListPage() {
 
       {/* 状态筛选 */}
       <Box sx={{ display: 'flex', gap: 0.5, mb: 2, flexWrap: 'wrap' }}>
-        {[ALL, ...ORDER_STATUSES].map((s) => (
+        {([ALL, ...ORDER_STATUSES] as (OrderStatus | typeof ALL)[]).map((s) => (
           <Chip
             key={s}
             label={s}

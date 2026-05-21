@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Container, Typography, Box, TextField, Chip, ToggleButtonGroup, ToggleButton,
-  Pagination, CircularProgress, Alert, Stack, InputAdornment,
+  Pagination, Alert, Stack, InputAdornment, Skeleton, Card, CardContent,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { getDemands } from '@/api/demands';
@@ -98,12 +98,22 @@ export default function HomePage() {
         placeholder="搜索需求标题…"
         value={searchInput}
         onChange={(e) => setSearchInput(e.target.value)}
-        sx={{ mb: 2 }}
+        sx={{
+          mb: 2,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 16,
+            bgcolor: 'background.paper',
+            transition: 'box-shadow 0.2s ease',
+            '&.Mui-focused': {
+              boxShadow: '0 0 0 3px rgba(107,47,160,0.12)',
+            },
+          },
+        }}
         slotProps={{
           input: {
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon color="action" />
+                <SearchIcon sx={{ color: 'text.secondary' }} />
               </InputAdornment>
             ),
           },
@@ -111,7 +121,17 @@ export default function HomePage() {
       />
 
       {/* 分类筛选 */}
-      <Box sx={{ display: 'flex', gap: 0.5, mb: 1.5, flexWrap: 'wrap' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 0.5,
+          mb: 1.5,
+          overflowX: 'auto',
+          pb: 0.5,
+          scrollbarWidth: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+        }}
+      >
         {[ALL, ...DEMAND_CATEGORIES].map((cat) => (
           <Chip
             key={cat}
@@ -135,6 +155,21 @@ export default function HomePage() {
           exclusive
           onChange={handleSortChange}
           size="small"
+          sx={{
+            '& .MuiToggleButton-root': {
+              px: 2,
+              py: 0.5,
+              fontSize: '0.8rem',
+              border: '1px solid',
+              borderColor: 'divider',
+              color: 'text.secondary',
+              '&.Mui-selected': {
+                bgcolor: 'primary.main',
+                color: '#fff',
+                borderColor: 'primary.main',
+              },
+            },
+          }}
         >
           <ToggleButton value="newest">最新</ToggleButton>
           <ToggleButton value="reward_high">报酬↓</ToggleButton>
@@ -142,11 +177,28 @@ export default function HomePage() {
         </ToggleButtonGroup>
       </Box>
 
-      {/* 列表 */}
+      {/* 骨架屏加载 */}
       {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress />
-        </Box>
+        <Stack spacing={1.5}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i} sx={{ overflow: 'hidden' }}>
+              <CardContent sx={{ p: 2.5, pl: 3.5, '&:last-child': { pb: 2.5 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                  <Skeleton variant="text" width="60%" height={24} />
+                  <Skeleton variant="text" width={50} height={24} />
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                  <Skeleton variant="rounded" width={56} height={24} sx={{ borderRadius: 20 }} />
+                  <Skeleton variant="rounded" width={48} height={24} sx={{ borderRadius: 20 }} />
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Skeleton variant="circular" width={24} height={24} />
+                  <Skeleton variant="text" width={60} />
+                </Box>
+              </CardContent>
+            </Card>
+          ))}
+        </Stack>
       )}
 
       {error && (

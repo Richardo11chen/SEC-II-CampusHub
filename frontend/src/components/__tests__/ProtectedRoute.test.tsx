@@ -7,7 +7,7 @@ import ProtectedRoute from '../ProtectedRoute';
 
 const mockUser: UserProfile = {
   id: 1, nickname: 'test', studentId: '2024000001',
-  creditScore: 70, role: 'student', showRealName: false,
+  creditScore: 70, role: 'student', status: '正常', showRealName: false,
   createdAt: '2026-01-01T00:00:00Z',
 };
 

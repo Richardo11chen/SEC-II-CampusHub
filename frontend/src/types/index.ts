@@ -38,6 +38,7 @@ export interface UserProfile {
   avatar?: string;
   creditScore: number;
   role: 'student' | 'admin';
+  status: string;
   showRealName: boolean;
   createdAt: string;
 }

@@ -70,18 +70,19 @@ function StatsTab() {
 
   const cards = [
     { label: '总用户', value: stats.totalUsers, color: '#1976d2' },
-    { label: '总需求', value: stats.totalDemands, color: '#388e3c' },
+    { label: '日活跃', value: stats.dailyActiveUsers, color: '#388e3c' },
     { label: '总订单', value: stats.totalOrders, color: '#f57c00' },
+    { label: '已完成订单', value: stats.completedOrders, color: '#2e7d32' },
     { label: '待处理纠纷', value: stats.pendingDisputes, color: '#d32f2f' },
-    { label: '待审批申请', value: stats.pendingApplications, color: '#7b1fa2' },
   ];
 
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 2 }}>
       {cards.map((c) => (
-        <Card key={c.label} sx={{ borderTop: 3, borderColor: c.color }}>
-          <CardContent sx={{ textAlign: 'center', py: 3 }}>
-            <Typography variant="h3" sx={{ fontWeight: 700, color: c.color }}>{c.value}</Typography>
+        <Card key={c.label} sx={{ overflow: 'hidden' }}>
+          <Box sx={{ height: 4, bgcolor: c.color }} />
+          <CardContent sx={{ textAlign: 'center', py: 2.5 }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: c.color, mb: 0.5 }}>{c.value}</Typography>
             <Typography variant="body2" color="text.secondary">{c.label}</Typography>
           </CardContent>
         </Card>
@@ -107,8 +108,9 @@ function UsersTab() {
     if (r.data) { setUsers(r.data.items); setTotal(r.data.pagination.total); }
   });
 
-  const handleToggle = async (userId: number) => {
-    await toggleUserStatus(userId);
+  const handleToggle = async (userId: number, currentStatus: string) => {
+    const action = currentStatus === '已禁用' ? 'enable' : 'disable';
+    await toggleUserStatus(userId, action);
     reload();
   };
 
@@ -136,9 +138,9 @@ function UsersTab() {
               <TableCell>{u.nickname}</TableCell>
               <TableCell>{u.creditScore}</TableCell>
               <TableCell><Chip label={u.role} size="small" variant="outlined" /></TableCell>
-              <TableCell><Chip label={u.role === 'admin' ? '管理员' : '正常'} size="small" color={u.role === 'admin' ? 'primary' : 'success'} /></TableCell>
+              <TableCell><Chip label={u.status} size="small" color={u.status === '已禁用' ? 'error' : 'success'} /></TableCell>
               <TableCell align="right">
-                <IconButton size="small" color="error" onClick={() => handleToggle(u.id)} title="禁用/启用">
+                <IconButton size="small" color="error" onClick={() => handleToggle(u.id, u.status)} title="禁用/启用">
                   <BlockIcon fontSize="small" />
                 </IconButton>
               </TableCell>
@@ -233,9 +235,9 @@ function DisputesTab() {
     if (r.data) { setDisputes(r.data.items); setTotal(r.data.pagination.total); }
   });
 
-  const handleResolve = async () => {
+  const handleResolve = async (action: string) => {
     if (!dialog.dispute || !dialog.resolution.trim()) return;
-    await resolveDispute(dialog.dispute.id, dialog.resolution);
+    await resolveDispute(dialog.dispute.id, dialog.resolution, action);
     setDialog({ open: false, dispute: null, resolution: '' });
     setSnackbar({ open: true, message: '已处理' });
     reload();
@@ -288,7 +290,8 @@ function DisputesTab() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialog((d) => ({ ...d, open: false }))}>取消</Button>
-          <Button variant="contained" onClick={handleResolve} disabled={!dialog.resolution.trim()}>确认处理</Button>
+          <Button variant="contained" color="success" onClick={() => handleResolve('complete')} disabled={!dialog.resolution.trim()}>标记完成</Button>
+          <Button variant="contained" color="error" onClick={() => handleResolve('cancel')} disabled={!dialog.resolution.trim()}>标记取消</Button>
         </DialogActions>
       </Dialog>
 
@@ -317,9 +320,9 @@ function ApplicationsTab() {
     if (r.data) { setApps(r.data.items); setTotal(r.data.pagination.total); }
   });
 
-  const handleReview = async (id: number, status: '已通过' | '已拒绝') => {
-    await reviewApplication(id, status);
-    setSnackbar({ open: true, message: status === '已通过' ? '已通过' : '已拒绝' });
+  const handleReview = async (id: number, action: 'approve' | 'reject') => {
+    await reviewApplication(id, action);
+    setSnackbar({ open: true, message: action === 'approve' ? '已通过' : '已拒绝' });
     reload();
   };
 
@@ -355,10 +358,10 @@ function ApplicationsTab() {
                 <TableCell align="right">
                   {a.status === '待审批' && (
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                      <IconButton size="small" color="success" onClick={() => handleReview(a.id, '已通过')} title="通过">
+                      <IconButton size="small" color="success" onClick={() => handleReview(a.id, 'approve')} title="通过">
                         <ApproveIcon fontSize="small" />
                       </IconButton>
-                      <IconButton size="small" color="error" onClick={() => handleReview(a.id, '已拒绝')} title="拒绝">
+                      <IconButton size="small" color="error" onClick={() => handleReview(a.id, 'reject')} title="拒绝">
                         <BlockIcon fontSize="small" />
                       </IconButton>
                     </Box>
