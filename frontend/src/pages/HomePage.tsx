@@ -1,57 +1,193 @@
-import { Container, Typography, Box, Card, Stack, Chip } from '@mui/material';
-import { HandshakeOutlined, SchoolOutlined, StarsOutlined } from '@mui/icons-material';
-import { useAuth } from '@/hooks/useAuth';
+import { useState, useEffect, useRef } from 'react';
+import {
+  Container, Typography, Box, TextField, Chip, ToggleButtonGroup, ToggleButton,
+  Pagination, CircularProgress, Alert, Stack, InputAdornment,
+} from '@mui/material';
+import { Search as SearchIcon } from '@mui/icons-material';
+import { getDemands } from '@/api/demands';
+import DemandCard from '@/components/DemandCard';
+import { DEMAND_CATEGORIES } from '@/types';
+import type { DemandCategory, DemandSummary, DemandQueryParams, PaginatedData } from '@/types';
 
-const FEATURES = [
-  { icon: <HandshakeOutlined sx={{ fontSize: 36 }} />, title: '互助互帮', desc: '发布需求或接单帮助同学，共建校园互助社区' },
-  { icon: <StarsOutlined sx={{ fontSize: 36 }} />, title: '信用体系', desc: '完成订单积累信用分，优质服务者更受信赖' },
-  { icon: <SchoolOutlined sx={{ fontSize: 36 }} />, title: '校园专属', desc: '面向南京大学学生，实名认证更安全' },
-];
+const PAGE_SIZE = 10;
+const ALL = '全部';
+
+type SortBy = NonNullable<DemandQueryParams['sortBy']>;
 
 export default function HomePage() {
-  const { isAuthenticated } = useAuth();
+  const [keyword, setKeyword] = useState('');
+  const [category, setCategory] = useState<string>(ALL);
+  const [sortBy, setSortBy] = useState<SortBy>('newest');
+  const [page, setPage] = useState(1);
+
+  const [data, setData] = useState<PaginatedData<DemandSummary> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const params: DemandQueryParams = {
+      page,
+      pageSize: PAGE_SIZE,
+      sortBy,
+    };
+    if (keyword.trim()) params.keyword = keyword.trim();
+    if (category !== ALL) params.category = category as DemandCategory;
+
+    getDemands(params)
+      .then((res) => {
+        if (controller.signal.aborted) return;
+        if (res.data) {
+          setData(res.data);
+          setError('');
+        } else {
+          setError(res.error || '加载失败');
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setError('加载失败');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [page, sortBy, category, keyword]);
+
+  // 搜索防抖
+  const [searchInput, setSearchInput] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(true);
+      setKeyword(searchInput);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const handleCategoryChange = (cat: string) => {
+    setLoading(true);
+    setCategory(cat);
+    setPage(1);
+  };
+
+  const handleSortChange = (_: unknown, val: SortBy | null) => {
+    if (val) {
+      setLoading(true);
+      setSortBy(val);
+      setPage(1);
+    }
+  };
+
+  const handlePageChange = (_: unknown, p: number) => {
+    setLoading(true);
+    setPage(p);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <Container maxWidth="md">
-      {/* Hero */}
-      <Box sx={{ textAlign: 'center', py: { xs: 6, md: 8 } }}>
-        <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>
-          CampusHub
-        </Typography>
-        <Typography variant="h6" color="primary" sx={{ fontWeight: 500, mb: 1 }}>
-          校园互助服务平台
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 480, mx: 'auto' }}>
-          快递代取、学习辅导、二手交易… 发布你的需求，或者帮助身边的同学
-        </Typography>
-        {!isAuthenticated && (
-          <Stack direction="row" spacing={2} sx={{ justifyContent: 'center' }}>
-            <Chip label="开始使用" component="a" href="/register" clickable color="primary" />
-            <Chip label="已有账号？登录" component="a" href="/login" clickable variant="outlined" />
-          </Stack>
-        )}
-      </Box>
+      {/* 搜索框 */}
+      <TextField
+        fullWidth
+        placeholder="搜索需求标题…"
+        value={searchInput}
+        onChange={(e) => setSearchInput(e.target.value)}
+        sx={{ mb: 2 }}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+          },
+        }}
+      />
 
-      {/* 特性 */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>
-        {FEATURES.map((f) => (
-          <Card key={f.title} sx={{ textAlign: 'center', py: 3 }}>
-            <Box sx={{ color: 'primary.main', mb: 1 }}>{f.icon}</Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>{f.title}</Typography>
-            <Typography variant="body2" color="text.secondary">{f.desc}</Typography>
-          </Card>
+      {/* 分类筛选 */}
+      <Box sx={{ display: 'flex', gap: 0.5, mb: 1.5, flexWrap: 'wrap' }}>
+        {[ALL, ...DEMAND_CATEGORIES].map((cat) => (
+          <Chip
+            key={cat}
+            label={cat}
+            size="small"
+            clickable
+            color={category === cat ? 'primary' : 'default'}
+            variant={category === cat ? 'filled' : 'outlined'}
+            onClick={() => handleCategoryChange(cat)}
+          />
         ))}
       </Box>
 
-      {/* 占位 */}
-      <Box sx={{ textAlign: 'center', py: 6 }}>
-        <Typography variant="body1" color="text.secondary">
-          需求广场正在开发中，即将呈现…
+      {/* 排序切换 */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          {data ? `共 ${data.pagination.total} 条需求` : ''}
         </Typography>
-        <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>
-          CampusHub v0.1
-        </Typography>
+        <ToggleButtonGroup
+          value={sortBy}
+          exclusive
+          onChange={handleSortChange}
+          size="small"
+        >
+          <ToggleButton value="newest">最新</ToggleButton>
+          <ToggleButton value="reward_high">报酬↓</ToggleButton>
+          <ToggleButton value="reward_low">报酬↑</ToggleButton>
+        </ToggleButtonGroup>
       </Box>
+
+      {/* 列表 */}
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {!loading && !error && data && data.items.length === 0 && (
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+            暂无需求
+          </Typography>
+          <Typography variant="body2" color="text.disabled">
+            {keyword || category !== ALL ? '试试调整筛选条件' : '成为第一个发布需求的人吧'}
+          </Typography>
+        </Box>
+      )}
+
+      {!loading && data && data.items.length > 0 && (
+        <>
+          <Stack spacing={1.5}>
+            {data.items.map((demand) => (
+              <DemandCard key={demand.id} demand={demand} />
+            ))}
+          </Stack>
+
+          {data.pagination.totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
+              <Pagination
+                count={data.pagination.totalPages}
+                page={page}
+                onChange={handlePageChange}
+                color="primary"
+                showFirstButton
+                showLastButton
+              />
+            </Box>
+          )}
+        </>
+      )}
     </Container>
   );
 }

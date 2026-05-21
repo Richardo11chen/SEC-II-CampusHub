@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardContent, Chip, Avatar,
-  Button, Divider, CircularProgress, Alert,
+  Button, Divider, CircularProgress, Alert, Snackbar,
 } from '@mui/material';
 import {
   AccessTime as TimeIcon, Place as PlaceIcon, MonetizationOn as RewardIcon,
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
 import { getDemand } from '@/api/demands';
+import { createOrder } from '@/api/orders';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDateTime, formatReward, demandStatusColor } from '@/utils/format';
 import type { Demand } from '@/types';
@@ -22,6 +23,10 @@ export default function DemandDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const [takingOrder, setTakingOrder] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'error',
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -55,7 +60,22 @@ export default function DemandDetailPage() {
 
   const publisher = demand.publisher;
   const isOwn = user?.id === publisher.id;
-  const canTake = demand.status === '开放' && !isOwn;
+  const canTake = demand.status === '开放' && !!user && !isOwn;
+
+  const handleTakeOrder = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setTakingOrder(true);
+    const res = await createOrder(Number(id));
+    if (res.data) {
+      navigate(`/orders/${res.data.id}`);
+    } else {
+      setTakingOrder(false);
+      setSnackbar({ open: true, message: res.error || '操作失败', severity: 'error' });
+    }
+  };
 
   return (
     <Container maxWidth="md">
@@ -135,7 +155,14 @@ export default function DemandDetailPage() {
 
           {/* 接单按钮 */}
           {canTake && (
-            <Button variant="contained" fullWidth size="large" sx={{ mt: 1 }}>
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              sx={{ mt: 1 }}
+              onClick={handleTakeOrder}
+              loading={takingOrder}
+            >
               接单
             </Button>
           )}
@@ -163,6 +190,22 @@ export default function DemandDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 操作反馈 */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          variant="filled"
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
