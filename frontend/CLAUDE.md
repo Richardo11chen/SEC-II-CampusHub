@@ -4,371 +4,167 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CampusHub (校园互助服务平台) — React + TypeScript + Vite + MUI v9 单页应用。面向南京大学学生，提供需求发布/浏览、接单/订单管理、信用评价等互助功能。
+CampusHub (校园互助服务平台) — React 18 + TypeScript + Vite 8 单页应用，面向南京大学学生。全部 11 个页面已完成开发（前端A + 前端B），部署于 `P4` 分支。
 
-## 当前状态（2026-05-16）
+## Page Inventory
 
-前端A 任务全部完成，项目处于稳定可运行状态。
+| Page | Route | Key Features |
+|------|-------|-------------|
+| HomePage | `/` | 需求卡片列表 + 分类筛选(9类) + 排序(最新/报酬高低) + 搜索防抖 + 分页 + 骨架屏 |
+| LoginPage | `/login` | 学号+密码登录，表单非空校验 |
+| RegisterPage | `/register` | 学号10位/密码8-32位混合/确认一致校验 |
+| DemandDetailPage | `/demands/:id` | 图片画廊 + 标签(分类/状态/紧急/匿名) + 发布者卡片 + 接单按钮 |
+| CreateDemandPage | `/demands/new` | 发布表单 + 9分类 + 紧急/匿名开关 + 逐张图片上传 |
+| ProfilePage | `/users/me` | 头像上传 + 查看/编辑双模式 + 学号/手机号脱敏显示 |
+| UserPublicPage | `/users/:id` | 公开资料 + 信用分 + 评价列表(Rating) |
+| OrderListPage | `/orders` | Tab切换(我发布的/我承接的) + 状态筛选 + 分页 |
+| OrderDetailPage | `/orders/:id` | Stepper状态时间线 + 提交完成/确认/取消/纠纷 + 评价入口 |
+| NotificationsPage | `/notifications` | 通知列表 + 未读标记 + 点击跳转订单 |
+| AdminPage | `/admin` | 5标签页(概览/用户管理/需求管理/纠纷处理/管理员申请) |
 
-| 任务 | 页面 | commit |
-|------|------|--------|
-| T05 | 基础架构（types/api/auth/Layout/路由） | `22fd804` |
-| T06/T07 | 注册 + 登录 | 同 T05 |
-| T09 | 个人资料（编辑/头像上传） | `372a30c` |
-| T14 | 发布需求（表单/分类/图片上传） | `a62c1fb` |
-| T16 | 需求详情（画廊/标签/发布者卡片） | `6619ac6` |
-| T28 | 用户公开主页（信用分/评价列表） | `ed0d098` |
-| T39 | 管理后台（5标签页全功能） | `0ffa68e` |
+测试覆盖：27 tests / 5 files（format / LoginPage / RegisterPage / ProtectedRoute / Layout）
 
-总测试覆盖：**27 个测试**（5 文件：format、LoginPage、RegisterPage、ProtectedRoute、Layout）
-
-## 环境配置（本地开发）
-
-```bash
-# 1. 启动 Docker MySQL
-docker run -d --name campushub-mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=campushub -p 3306:3306 mysql:8.0
-
-# 2. 生成 Prisma + 建表
-cd backend
-npx prisma generate --schema=shared/prisma/schema.prisma
-npx prisma db push --schema=shared/prisma/schema.prisma
-
-# 3. 启动后端（两个服务分终端或 concurrently）
-node --import tsx/esm service-b/src/app.ts   # 3002
-node --import tsx/esm service-a/src/app.ts   # 3001
-
-# 4. 启动前端
-cd frontend && pnpm dev
-```
-
-> 注意：后端 npm workspace 在 Windows 上存在 `npx tsx` 寻址问题，使用 `node --import tsx/esm` 替代。
-
-## 重要经验
-
-- MUI v9 弃用了 `inputProps`/`InputLabelProps`，改用 `slotProps.htmlInput`/`slotProps.inputLabel`
-- MUI v9 Stack 不支持 `justifyContent`/`flexWrap` 作为直接 prop，需放入 `sx`
-- ESLint `react-hooks/set-state-in-effect` 规则严格禁止在 effect 中同步调用 setState，解决方案：用 lazy initializer 或移除多余的 setLoading(true)
-- 后端返回的 `reward` 是 string 类型，前端 API 层需用 `Number()` 转换
-- 后端返回的 `images` 是 `[{ id, url, sortOrder }]`，不是 `string[]`
-- GitLab CI `rules:changes` 对比的是 default branch（main），feat/frontend 与 main 差异大时所有 job 都会触发
-
-## 开发环境
+## Development Commands
 
 ```bash
-# 启动前端开发服务器（默认 5173）
-cd frontend && pnpm dev
-
-# 后端需同时启动（可在根目录 backend 中）
+# 后端（两服务分终端）
 cd backend
-pnpm dev:a  # service-a (3001) — demand + order
-pnpm dev:b  # service-b (3002) — auth + user + upload
+node --import tsx/esm service-b/src/app.ts   # 3002 (auth/user/upload)
+node --import tsx/esm service-a/src/app.ts   # 3001 (demand/order)
 
-# 代码检查
+# 前端
+cd frontend && pnpm dev                       # 5173
+
+# 提交前必跑
 pnpm lint       # ESLint
 pnpm check      # tsc -b --noEmit
-pnpm test       # Vitest
+pnpm test       # Vitest (jsdom)
 pnpm build      # tsc -b && vite build
 ```
 
-## Vite 代理配置
+> Windows 注意：npm workspace hoisting 导致 `npx tsx` 不可用，用 `node --import tsx/esm` 替代。
 
-| 前端路径 | 代理目标 | 后端服务 |
-|---------|---------|---------|
+## Vite Proxy
+
+| Frontend Path | Target | Service |
+|--------------|--------|---------|
 | `/api/auth/*` | `localhost:3002` | service-b |
 | `/api/users/*` | `localhost:3002` | service-b |
 | `/api/upload` | `localhost:3002` | service-b |
 | `/uploads/*` | `localhost:3002` | service-b |
+| `/api/reviews/*` | `localhost:3002` | service-b |
+| `/api/notifications/*` | `localhost:3002` | service-b |
+| `/api/admin/*` | `localhost:3002` | service-b |
 | `/api/demands/*` | `localhost:3001` | service-a |
 | `/api/orders/*` | `localhost:3001` | service-a |
 
-## 前端开发分工
-
-> 前后端均无显式文件夹拆分。前端按任务粒度分为 A / B 两部分，但代码放在同一 `src/` 目录下，两人各自按任务认领。
-
-### 前端A（孙正奇）— 本次开发
-
-| 任务 | 页面/模块 | 核心功能 | 后端依赖 |
-|------|----------|---------|---------|
-| T05 | 项目初始化 | 路由、AuthContext、axios 拦截器、ProtectedRoute | — |
-| T06 | RegisterPage | 注册表单 + 前端校验 | POST /api/auth/register |
-| T07 | LoginPage | 登录表单 + token 存储 | POST /api/auth/login |
-| T09 | ProfilePage | 个人信息展示/编辑 + 脱敏 | GET/PUT /api/users/me |
-| T14 | CreateDemandPage | 发布需求表单 + 图片上传 | POST /api/demands + /api/upload |
-| T16 | DemandDetailPage | 需求详情 + 发布者信息 + 标签 + 图片画廊 | GET /api/demands/:id |
-| T28 | UserPublicPage | 用户公开主页（信用分/评价） | GET /api/users/:id/profile |
-| T39 | Admin pages | 管理后台（用户/需求/纠纷/统计） | 全部 /api/admin/* 接口 |
-
-### 前端B（宋丞轩）— 后续开发
-
-| 任务 | 页面 | 核心功能 |
-|------|------|---------|
-| T15 | HomePage (需求广场) | 需求卡片列表 + 筛选/排序/分页/搜索 |
-| T22 | DemandDetailPage | 添加"接单"按钮（逻辑扩展） |
-| T23 | OrderListPage | 我的订单（Tab + 状态筛选） |
-| T24 | OrderDetailPage | 订单详情 + 状态流转操作 |
-| T27 | ReviewForm | 评价入口 + 评分组件 |
-| T34 | NotificationsPage | 通知列表 |
-| T40 | 前端完善 | 紧急标签/匿名发布/纠纷入口/错误提示统一 |
-
----
-
-## 实现规划（第一阶段 - 前端A）
-
-### 开发顺序与依赖关系
-
-```
-T05 (基础架构)
-  ├── T06 (注册) → T07 (登录)
-  └── T09 (个人资料)
-T14 (发布需求) ← 依赖 T07 的 token
-T16 (需求详情) ← 依赖 T14 的数据
-T28 (用户主页) ← 依赖 T07 的 auth
-T39 (管理后台) ← 最后
-```
-
-### T05：项目初始化（基础架构）
-
-需要创建的文件：
+## Architecture
 
 ```
 src/
-├── api/
-│   ├── client.ts           # axios 实例 + 拦截器（token 附加 + 401 刷新）
-│   ├── auth.ts             # register / login / refresh / logout
-│   └── users.ts            # getMe / updateMe / getUserProfile
-├── types/
-│   └── index.ts            # 全部 TS 类型（从 CLAUDE.md 迁移）
-├── store/
-│   └── AuthContext.tsx      # AuthProvider + useAuth
-├── components/
-│   ├── Layout.tsx           # AppBar + BottomNav + 布局
-│   └── ProtectedRoute.tsx   # 路由守卫
-├── App.tsx                  # 路由配置（替换模板内容）
-├── main.tsx                 # 入口（注入 MUI ThemeProvider）
-└── theme.ts                # MUI 主题（主色/辅色/字体）
-```
-
-关键实现要点：
-
-- **AuthContext**：管理 `user` / `accessToken` / `refreshToken` / `isLoading`，localStorage 持久化
-- **axios 401 拦截器**：捕获 401 → 尝试 `/auth/refresh` 刷新 → 重放请求 → 刷新失败清登录态跳 `/login`
-- **Promise 锁**：防止并发刷新（单个 pending 请求，其他请求等待其完成）
-- **ProtectedRoute**：检查 `user` 是否存在，不存在且非 loading 时 Navigate to `/login`
-- **MUI 主题**：主色 `#1976d2` (blue)，备用 `#388e3c` (green)
-
-Layout 结构：
-
-```
-<AppBar position="sticky">
-  └─ 左: 首页 / 右: 通知铃铛 + 用户头像下拉菜单
-<Box component="main" sx={{ pb: 7 }}>
-  └─ <Outlet /> (路由内容)
-</Box>
-<BottomNavigation>  (移动端底部导航)
-  └─ 首页 / 发布 / 订单 / 我的
-```
-
-## MUI 组件选型
-
-| 场景 | MUI 组件 |
-|------|---------|
-| 布局容器 | `Container`, `Box`, `Stack`, `Grid2` |
-| 导航 | `AppBar`, `BottomNavigation`, `Tabs` |
-| 表单 | `TextField`, `Select`, `Checkbox`, `Switch`, `Button`, `IconButton` |
-| 反馈 | `Snackbar`, `Alert`, `Dialog`, `CircularProgress` |
-| 数据展示 | `Card`, `Chip`, `Avatar`, `Badge`, `List` |
-| 排版 | `Typography`, `Divider` |
-
-**注意**：MUI v9 使用 `@mui/material` 新包名，API 与 v5/v6 基本兼容。Grid 改用 `Grid2`（即 `import { Grid2 } from '@mui/material'`）。
-
-## 前端目录结构
-
-```
-frontend/src/
-├── api/                    # API 函数（按模块拆分）
-│   ├── client.ts           #    axios 实例 + 拦截器
-│   ├── auth.ts             #    登录/注册/刷新/登出
-│   ├── demands.ts          #    需求 CRUD + 列表
-│   ├── orders.ts           #    订单 CRUD
-│   ├── users.ts            #    用户信息/公开资料
-│   ├── upload.ts           #    文件上传
-│   └── notifications.ts    #    通知（预留）
-├── types/
-│   └── index.ts            # 全部 TypeScript 类型定义
-├── store/
-│   └── AuthContext.tsx      # 认证上下文（token/user）
-├── components/             # 可复用 UI 组件
-│   ├── Layout.tsx           #   全局布局（AppBar + BottomNav）
-│   ├── ProtectedRoute.tsx   #   路由守卫
-│   ├── DemandCard.tsx       #   需求卡片（供 T15 用，可选）
-│   └── ...                  #   其他通用组件
-├── pages/                  # 页面组件
-│   ├── LoginPage.tsx
-│   ├── RegisterPage.tsx
-│   ├── ProfilePage.tsx
-│   ├── CreateDemandPage.tsx
-│   ├── DemandDetailPage.tsx
-│   └── ...                  # 按任务逐步添加
-├── hooks/                  # 自定义 Hooks
-│   └── useAuth.ts          #   useAuth hook（从 AuthContext 导出）
+├── api/              # axios + 按模块拆分
+│   ├── client.ts     #   实例、401 自动刷新（Promise 并发锁）、refreshHandler 注入
+│   ├── auth.ts/users.ts/demands.ts/orders.ts/...
+├── types/index.ts    # 全部 TS 类型 + 枚举常量（DEMAND_CATEGORIES 等）
+├── store/            # 全局认证状态（仅 AuthContext，无全局状态库）
+│   ├── authContext.ts    # Context 定义
+│   └── AuthProvider.tsx  # Provider + 会话恢复 + token 管理
+├── hooks/useAuth.ts      # useAuth hook
+├── components/           # 可复用 UI
+│   ├── Layout.tsx        # AppBar + BottomNav + 用户菜单
+│   ├── ProtectedRoute.tsx# 路由守卫（loading → 未登录跳转）
+│   ├── DemandCard.tsx    # 需求卡片（分类色条 + 脉冲紧急标签）
+│   └── PageTransition.tsx# 页面过渡动画
+├── pages/                # 11 个页面（见上表）
 ├── utils/
-│   ├── format.ts            # 脱敏/日期格式化等工具函数
-│   └── __tests__/           # 测试文件
-├── theme.ts                 # MUI 主题配置
-├── App.tsx                  # 路由配置
-└── main.tsx                 # 入口
+│   └── format.ts         # 脱敏/日期/相对时间/报酬/状态→颜色
+├── theme.ts              # MUI 主题（南大紫 #6B2FA0 主色）
+├── App.tsx               # 路由配置
+└── main.tsx              # 入口
 ```
 
-## 路由配置
+## Key Patterns
 
+### API Layer
+- All functions return `{ data: T | null; error: string | null }`
+- Error extraction via `extractMessage(err, fallback)` guard — never `as any`
+- Backend `reward` is `string` type → must `Number()` convert in API layer
+- Backend `images` is `[{ id, url, sortOrder }]` → not `string[]`
+
+### Page Pattern (three-state)
 ```typescript
-<Routes>
-  {/* 公开路由 */}
-  <Route path="/login" element={<LoginPage />} />
-  <Route path="/register" element={<RegisterPage />} />
-  <Route path="/" element={<HomePage />} />            {/* 需求广场 - 前端B */}
-  <Route path="/demands/:id" element={<DemandDetailPage />} />
+const [loading, setLoading] = useState(true);   // 初始 true，无需 effect 内 set
+const [error, setError] = useState('');
+const [data, setData] = useState<T | null>(null);
 
-  {/* 需认证路由（前端A 实现以下） */}
-  <Route element={<ProtectedRoute />}>
-    <Route path="/demands/new" element={<CreateDemandPage />} />
-    <Route path="/demands/:id/edit" element={<CreateDemandPage />} />
-    <Route path="/users/me" element={<ProfilePage />} />
-    <Route path="/users/:id" element={<UserPublicPage />} />
-    <Route path="/orders" element={<OrderListPage />} />      {/* 前端B */}
-    <Route path="/orders/:id" element={<OrderDetailPage />} /> {/* 前端B */}
-    <Route path="/notifications" element={<NotificationsPage />} /> {/* 前端B */}
-  </Route>
-</Routes>
+useEffect(() => {
+  api().then(r => {
+    if (r.data) { setData(r.data); setError(''); }
+    else { setError(r.error || '加载失败'); }
+  }).catch(() => setError('加载失败'))
+  .finally(() => setLoading(false));
+}, []);
+
+if (loading) return <CircularProgress />;
+if (error) return <Alert severity="error">{error}</Alert>;
+if (!data?.items.length) return <EmptyState />;
+return <List data={data.items} />;
 ```
 
----
-
-## MUI 主题设计
-
+### Snackbar Pattern (for mutations)
 ```typescript
-// theme.ts
-import { createTheme } from '@mui/material/styles';
+const [snackbar, setSnackbar] = useState<{
+  open: boolean; message: string; severity: 'success' | 'error';
+}>({ open: false, message: '', severity: 'success' });
 
-const theme = createTheme({
-  palette: {
-    primary: { main: '#1976d2' },    // 校园蓝
-    secondary: { main: '#388e3c' },   // 活力绿
-    background: { default: '#f5f5f5' },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Noto Sans SC", sans-serif',
-  },
-  components: {
-    MuiCard: {
-      styleOverrides: { root: { borderRadius: 12 } },
-    },
-    MuiButton: {
-      styleOverrides: { root: { textTransform: 'none', borderRadius: 8 } },
-    },
-  },
-});
+// Usage
+setSnackbar({ open: true, message: '操作成功', severity: 'success' });
+
+// JSX
+<Snackbar open={snackbar.open} autoHideDuration={3000}
+  onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
+  <Alert severity={snackbar.severity} variant="filled">{snackbar.message}</Alert>
+</Snackbar>
 ```
 
-## 设计与代码规范
+### Auth & 401 Refresh
+- `ProtectedRoute`: check `isLoading` → `<CircularProgress />`, then `isAuthenticated` → `<Navigate to="/login">`
+- axios 401 interceptor: exclusive refresh queue via `pendingRefresh` Promise lock (prevents concurrent refresh calls)
+- On refresh failure: `window.dispatchEvent(new Event('auth:logout'))` → AuthProvider catches and clears state
+- Session restore: `useState` lazy initializer reads localStorage, then async-validates token via `getMe()` or `refresh()`
+- ESLint rule `react-hooks/set-state-in-effect` prohibits sync `setState` in effect body → use lazy initializer or move to async callback
 
-- **UI 风格**：Material Design，简洁干净的白底卡片设计
-- **色彩**：主色蓝色 `#1976d2`，强调绿色 `#388e3c`，紧急/危险红色 `#d32f2f`
-- **组件颗粒度**：页面级别的表单/详情直接写在 page 文件中，仅当跨页面的共享 UI 才提取到 `components/`
-- **状态管理**：全局只用 AuthContext，其余状态就地用 `useState`/`useReducer`，不做全局状态库
-- **样式方案**：MUI `sx` prop 优先，复杂样式用 `styled()` 组件；避免 CSS 文件
-- **错误处理**：API 函数返回统一类型 `{ data: T | null; error: string | null }`，页面层负责展示 Snackbar/Alert
-- **代码组织**：每个页面组件放在 `pages/` 下一个文件，附属子组件可内联或同文件内定义
+## MUI v9 vs v5/v6
 
-## 完整 API 端点清单
+| v5/v6 | v9 |
+|-------|----|
+| `inputProps` | `slotProps.htmlInput` |
+| `InputLabelProps` | `slotProps.inputLabel` |
+| `Stack justifyContent`/`flexWrap` | put into `sx` |
+| `AddCircleOutline` | `AddCircleOutlined` |
+| `CheckCircleOutline` | `CheckCircleOutlined` |
+| `Grid2 from @mui/material/Grid2` | `Grid2 from @mui/material` |
 
-参见 `docs/P3/api-spec.yaml`（OpenAPI 3.0，~2790 行）。
+## Known Pitfalls
 
-### Auth (service-b:3002)
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Avatar upload says success but shows old image | Zod `avatar: z.string().url()` rejects relative path `/uploads/...` | Remove `.url()` validation, avatar is a relative path |
+| Page white screen | `formatReward("0")` calls `"0".toFixed()` — TypeError | API layer `Number()` conversion before passing to formatters |
+| ESLint `no-explicit-any` in tests | Mock user with `as any` | Use typed `UserProfile` const |
+| ESLint `set-state-in-effect` | Sync `setState()` in `useEffect` body | Lazy initializer or move setState to `.then()` callback |
+| Vite stall after many restarts | Windows `TIME_WAIT` on port 5173 | `pnpm dev --port 5176` |
 
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| POST | `/api/auth/register` | 注册 | 否 |
-| POST | `/api/auth/login` | 登录 | 否 |
-| POST | `/api/auth/refresh` | 刷新 Token | 否 |
-| POST | `/api/auth/logout` | 登出 | JWT |
+## Theme
 
-### User (service-b:3002)
+南大紫主题 (`src/theme.ts`):
+- Primary: `#6B2FA0` (purple) | Secondary: `#C8965C` (warm gold)
+- Cards: `borderRadius: 16`, left color bar via `&::before`
+- BottomNav: 62px height, purple selected state
+- Buttons: `borderRadius: 10`, no uppercase (`textTransform: 'none'`)
 
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| GET | `/api/users/me` | 个人信息 | JWT |
-| PUT | `/api/users/me` | 更新信息 | JWT |
-| GET | `/api/users/:userId/profile` | 公开资料 | JWT |
+## Testing
 
-### Demand (service-a:3001)
-
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| POST | `/api/demands` | 发布需求 | JWT |
-| GET | `/api/demands` | 列表（筛选/分页/排序） | 否 |
-| GET | `/api/demands/:demandId` | 详情 | 否 |
-| PUT | `/api/demands/:demandId` | 更新 | JWT |
-| DELETE | `/api/demands/:demandId` | 删除 | JWT |
-
-### Order (service-a:3001)
-
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| POST | `/api/orders` | 接单 | JWT |
-| GET | `/api/orders` | 我的订单 | JWT |
-| GET | `/api/orders/:orderId` | 订单详情 | JWT |
-| PUT | `/api/orders/:orderId/complete` | 提交完成 | JWT |
-| PUT | `/api/orders/:orderId/confirm` | 确认完成 | JWT |
-
-### Upload (service-b:3002)
-
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| POST | `/api/upload` | 上传图片 | JWT |
-
----
-
-## 通用 API 响应格式
-
-```typescript
-// 成功
-{ code: 200, message: "操作成功", data: T }
-
-// 失败
-{ code: 400, message: "错误描述", errors?: [{ field, message }], timestamp: string }
-
-// 分页
-{ code: 200, data: { items: T[], pagination: { page, pageSize, total, totalPages } } }
-```
-
-## 关键业务规则
-
-- **订单状态**：接单→进行中→待确认→已完成（48h 自动确认）
-- **信用分**：0-100，初始 70，< 40 禁止发布需求
-- **图片上传**：10MB 限制，jpg/png/gif/webp
-- **脱敏展示**：学号前4后3 (`2024*****456`)，手机号前3后4 (`138****1234`)
-- **需求分类**：快递代取/学习辅导/二手交易/活动组队/失物招领/拼车拼单/找搭子/咨询答疑/其他
-
-## 错误码处理
-
-| 状态码 | 前端动作 |
-|--------|---------|
-| 400 | 展示字段级错误信息 |
-| 401 | 刷新 Token；刷新失败跳转 /login |
-| 403 | 展示具体错误原因 |
-| 404 | 展示 404 提示 |
-| 409 | 展示冲突信息（如"已被接走"） |
-| 413 | 提示"文件大小不能超过 10MB" |
-| 429 | 提示"操作过于频繁" |
-
-## TypeScript 类型定义
-
-完整类型见 `src/types/index.ts`（在 T05 中创建）。
-
-## 参考文档
-
-- `docs/P2/架构设计文档.md` — 架构决策
-- `docs/P3/详细设计文档.md` — 类图/DB Schema/状态机/信用分
-- `docs/P3/api-spec.yaml` — OpenAPI 3.0 完整规范
-- `docs/P4/Sprint合并任务看板.md` — Sprint 任务拆分
+- 27 tests across 5 files (Vitest + jsdom + @testing-library/react)
+- Mock pattern: full `AuthContextType` interface, never `as any`
+- Setup file: `src/utils/__tests__/setup.ts` imports `@testing-library/jest-dom/vitest`

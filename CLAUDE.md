@@ -87,21 +87,14 @@ Services import shared code via `@campushub/shared` (barrel export from `shared/
 - **Auth**: Refresh token rotation with 7-day expiry, access token 3600s
 - **10 DB tables**: User, Demand, DemandImage, Order, Review, Notification, Message, Dispute, AdminApplication, RefreshToken
 
-## Implementation Module Priority
-
-- **P4 (current)**: Auth & User Management, Demand CRUD, Order Flow basics
-- **P1**: Reviews & Credit system, Notifications, Disputes, Cancel orders
-- **P2**: Chat Messages, Recommendations, Admin Dashboard
-
 ## Available Branches
 
 - `main` — base branch (documentation only)
-- `P0`, `P1`, `P2`, `P3`, `P4` — parallel phase branches (P4 is active with complete backend)
-- `feat/frontend` — Frontend development branch (React + Vite + MUI, frontend A tasks completed)
+- `P0`, `P1`, `P2`, `P3`, `P4` — parallel phase branches (P4 is active with complete backend and frontend)
 
-## Frontend Status (feat/frontend)
+## Frontend Status (P4)
 
-All **前端A** tasks (T05-T09, T14, T16, T28, T39) are implemented and committed. See `frontend/CLAUDE.md` and `frontend/DEV_LOG.md` for details.
+All frontend tasks (A + B) are implemented and committed (11 pages, full order/review/notification flow). See `frontend/CLAUDE.md` and `frontend/DEVLOG.md` for details.
 
 ## Troubleshooting
 
