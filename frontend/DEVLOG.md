@@ -1,8 +1,8 @@
 # CampusHub 前端开发日志
 
-> 开发周期：2026-05-16
-> 分支：`feat/frontend`
-> 开发者：前端A（孙正奇）
+> 开发周期：2026-05-16 ~ 2026-05-22
+> 分支：`feat/frontend` → `P4`
+> 开发者：前端A（孙正奇），前端B（宋丞轩）
 > 说明：完整记录每次会话的关键决策、问题、解决方案和后续注意事项
 
 ---
@@ -20,6 +20,8 @@
 9. [组件测试集成](#9-组件测试集成)
 10. [UI 美化](#10-ui-美化)
 11. [附录](#11-附录)
+12. [前端B 开发记录](#12-前端b-开发记录)
+13. [P4 分支整合与维护](#13-p4-分支整合与维护)
 
 ---
 
@@ -558,6 +560,10 @@ AppBar: gradient 135deg #2563eb → #059669
 | `0ffa68e` | feat: T39 管理后台 — 概览/用户/需求/纠纷/申请审批 | 管理后台 |
 | `b6d4c18` | test: 添加组件测试 — RegisterPage/Layout/ProtectedRoute 全面覆盖 | 组件测试 |
 | `d749c25` | style: UI美化 — 蓝绿渐变主题/AppBar/首页Hero/卡片阴影 | UI 美化 |
+| `41fbb23` | feat: 前端B全部任务完成 (T15/T22/T23/T24/T27/T34/T40) | 前端B 合并 |
+| `720ff03` | feat: 前端界面美化 — 南大紫主题重设计 | 南大紫主题 |
+| `7362d8e` | fix: 修复订单详情白屏、首页加载卡顿、接单按钮可见性 | Bug 修复 |
+| `b4bcc04` | feat: 个人信息页修复 + 字段编辑补全 + 修改次数限制 | 个人信息页 |
 
 ### 11.2 文件统计
 
@@ -571,18 +577,6 @@ src/types/      1 file      ~170行   (index.ts)
 src/utils/      1 + 2 tests ~100行   (format/format.test/setup)
 src/            3 files     ~120行   (App/main/theme)
 ```
-
-### 11.3 后续前端B 任务
-
-| 任务 | 页面 | 说明 |
-|------|------|------|
-| T15 | HomePage（需求广场） | 卡片列表 + 筛选/排序/分页/搜索 |
-| T22 | DemandDetailPage 接单 | "接单"按钮 + 409 冲突处理 |
-| T23 | OrderListPage | 我的订单（Tab + 状态筛选） |
-| T24 | OrderDetailPage | 订单详情 + 状态流转操作 |
-| T27 | ReviewForm | 评价入口 + 评分组件 |
-| T34 | NotificationsPage | 通知列表 |
-| T40 | 前端完善 | 紧急标签/匿名发布/纠纷入口/错误提示统一 |
 
 ### 11.4 常见问题速查
 
@@ -598,3 +592,206 @@ src/            3 files     ~120行   (App/main/theme)
 | Docker `-p` 映射不生效 | CMD 参数干扰 | 不加额外参数，容器启动后 ALTER USER |
 | 端口 5173 被占 | TIME_WAIT | `pnpm dev --port 5176` |
 | CI lint 不过但本地过 | 测试文件用了 `as any` | 必须用 `UserProfile` 类型常量 |
+
+---
+
+## 12. 前端B 开发记录
+
+> 开发者：前端B（宋丞轩）
+> 基于代码追溯，非第一手记录
+
+### 12.1 T15 需求广场（HomePage）
+
+| 功能 | 实现 |
+|------|------|
+| 需求卡片列表 | 复用 DemandCard 组件，含分类色条/紧急脉冲动画/可接单标签 |
+| 分类筛选 | Chip 横向滚动，9 分类 + "全部" |
+| 排序 | ToggleButtonGroup：最新 / 报酬↓ / 报酬↑ |
+| 搜索 | 400ms 防抖，通过 keyword 参数请求 |
+| 分页 | Pagination 组件，10 条/页 |
+| 骨架屏 | 加载态展示 5 张骨架 Card |
+| 取消请求 | AbortController + useEffect 清理，防止竞态 |
+
+### 12.2 T22 接单功能（DemandDetailPage 扩展）
+
+- 接单按钮：需求开放 + 已登录 + 非本人时展示
+- 未登录显示"登录后接单"按钮，点击跳转 /login
+- 接单成功后 navigate 到订单详情页
+- 失败时 Snackbar 展示错误信息（含 409 冲突场景）
+
+### 12.3 T23/T24 订单列表与详情
+
+**OrderListPage：**
+- 顶部 Tabs 切换"我发布的"/"我承接的"（role 参数）
+- Chip 状态筛选（全部 + 5 种订单状态）
+- Pagination 分页，10 条/页
+- 卡片点击跳转订单详情
+
+**OrderDetailPage：**
+- Stepper 展示状态进度：进行中 → 待确认 → 已完成
+- 已取消/纠纷中状态用 Alert 替代 Stepper
+- 操作按钮按角色和状态动态展示：
+  - 承接者 + 进行中 → 提交完成
+  - 发布者 + 待确认 → 确认完成
+  - 进行中 → 取消订单（Dialog 输入原因）
+  - 进行中/待确认 → 发起纠纷（Dialog 输入原因）
+- 评价区集成在同一页面，非独立页面
+
+### 12.4 T27 评价
+
+- 集成在 OrderDetailPage 底部，订单"已完成"时展示
+- 已评价：显示评分 + 内容（只读）
+- 未评价：Rating 组件 + 多行文本框 + 字符计数（1000 限制）
+- 评价后乐观更新，无需刷新
+
+### 12.5 T34 通知列表
+
+- 全部/未读 Chip 筛选
+- 点击通知标记已读（乐观更新，前端直接改 isRead）
+- 有 relatedId 时跳转对应订单
+- 空状态提示区分"没有未读"和"还没有通知"
+- Pagination 分页
+
+### 12.6 T40 前端完善
+
+本次前端B 未单独提取 T40 commit，相关改进分布在各个页面中：
+- 紧急标签：DemandCard 红色脉冲动画 + 详情页 Chip
+- 匿名发布：详情页展示匿名 Chip，发布者卡片隐藏昵称/不展示查看主页
+- 纠纷入口：OrderDetailPage "发起纠纷"按钮 + Dialog
+- 错误提示统一：沿用前端A 的 Snackbar + Alert 模式
+
+---
+
+## 13. P4 分支整合与维护
+
+> 开发周期：2026-05-22
+> 开发者：孙正奇
+
+### 13.1 第一次运行：依赖链断裂
+
+**背景**：接手 P4 分支代码后，需要在本地从头跑通整个项目。
+
+**问题 1：npm 不在 PATH 中**
+
+本机通过 pnpm 管理 Node 运行时（`pnpm bin/node`），npm 未安装。报错 `'npm' is not recognized`。
+
+→ `pnpm add -g npm` 安装后可用。
+
+**问题 2：pnpm 覆盖 npm workspace**
+
+运行 `pnpm run build -w shared` 时，pnpm 检测到 backend 使用 npm workspaces（`package.json` 的 `workspaces` 字段，非 `pnpm-workspace.yaml`），将 npm 已安装的包移入 `node_modules/.ignored` 隔离。
+
+后果：`node-schedule`、`typescript`、`concurrently` 等模块丢失，service-a 启动时报 `ERR_MODULE_NOT_FOUND`。
+
+→ 需要二选一：要么全用 npm 重装，要么创建 `pnpm-workspace.yaml` 转 pnpm 管理。选了前者（保持仓库原有配置），但当时环境中 npm 不可用 → 先安 npm → 删 pnpm 产生的 `.ignored` → `npm install`。
+
+> 见 8.3 后端启动 — 已知的 `npx tsx` 寻址问题依然存在，需用 `node --import tsx/esm`。
+
+**问题 3：`@campushub/shared` 未编译**
+
+后端 workspace 三包结构中，`service-a/b` 的 `package.json` 中 `main: "dist/index.js"`，但 `shared/dist/` 不存在（源码在 `shared/src/`，需 tsc 编译）。
+
+→ `cd shared && tsc` 生成 dist。
+
+**问题 4：Prisma Client 过时**
+
+`npm install` 后 node_modules 重建，Prisma Client 丢失。编译 shared 时报类型错误（`Prisma.xxxWhereInput` 不存在）。
+
+→ `prisma generate` 重新生成。需注意：npm workspace hoisting 下 prisma CLI 在根 `node_modules/`，不能直接用 `npx prisma`（见 8.2）。
+
+### 13.2 Bug 修复：头像上传不生效
+
+**症状**：上传头像后提示"头像更新成功"，但头像未更新，仍显示旧头像或首字母占位。
+
+**定位过程**：
+
+1. 代码审查（`frontend/src/pages/ProfilePage.tsx:63-78`）：
+   ```
+   用户选图 → POST /api/upload → { url: "/uploads/.../uuid.png" }
+                                   ↓
+        PUT /api/users/me { avatar: "/uploads/.../uuid.png" }
+                                   ↓
+   updateUser(res.data) → context 更新 → UI 刷新
+   ```
+   流程看起来完整，上传成功了，问题可能在更新后端用户记录这一步。
+
+2. 手动 curl 验证（避开前端）：
+   - POST /api/upload → 201, 返回 `{ url: "/uploads/2026-05/uuid.png" }` ✅
+   - PUT /api/users/me `{ avatar: "/uploads/2026-05/uuid.png" }` → **400**
+   - 错误体：`{ errors: [{ field: "avatar", message: "Invalid url" }] }`
+
+3. 找到根因：`backend/service-b/src/validators/user-validators.ts:5`
+   ```typescript
+   avatar: z.string().url().max(500).optional(),
+   //               ^^^^ Zod 要求完整 URL（含协议+域名）
+   ```
+   但上传接口返回的是**相对路径**（无 host），Zod 拒绝通过。
+
+4. 前端为何"提示成功"？再看 `handleAvatarChange`：
+   ```typescript
+   if (res.data) {               // res = upload result → 成功，进这里
+     const updateRes = await updateMe({ avatar: res.data.url });
+     if (updateRes.data) {       // updateRes.data = null（400 拒绝了）
+       updateUser(updateRes.data);
+       setSnackbar("头像更新成功");
+     }
+     // ← 没有 else！update 失败时既不报错也不回退
+   }
+   ```
+   upload 成功 → 进外层 if → update 失败（400）→ updateRes.data 为 null → 内层 if 不成立 → **静默结束**，Snackbar 既不显示成功也不显示失败。
+
+**修复**：
+- 后端：`z.string().url()` → `z.string()`（avatar 字段存的是相对路径，无需 URL 校验）
+- 前端：补充 `else { setSnackbar({ ..., message: updateRes.error || '更新头像失败', severity: 'error' }) }`
+
+**涉及文件**：
+- `backend/service-b/src/validators/user-validators.ts`
+- `frontend/src/pages/ProfilePage.tsx`
+
+### 13.3 首屏加载 10s 问题
+
+**现象**：第一次访问 `http://localhost:5173` 时首屏需要约 10s 加载，后续无论用什么浏览器访问都 < 1s。
+
+**原因**：Vite 的**依赖预构建**机制。
+
+1. 第一次请求时，Vite 扫描 `main.tsx` 的 import 图，发现 React、React Router、MUI（数十个组件包）、axios 等依赖
+2. 用 esbuild 将这些 CJS/UMD 模块批量编译为 ESM，结果写入 `node_modules/.vite/`
+3. MUI 是重量级依赖（每个组件独立包），预构建耗时 5-10s
+4. 构建完成后，`.vite/` 缓存持久化，后续请求跳过此步骤
+5. `.vite/` 存在服务端，所以换浏览器不受影响
+
+**与生产环境的区别**：`pnpm build`（vite build）会在构建时一次性完成所有编译，首屏加载不存在此问题。
+
+### 13.4 Vite 冷启动观察
+
+后端服务（service-b）日志中观察到两次访问：
+
+| 时间 | User-Agent | 行为 |
+|------|-----------|------|
+| 12:19 | Edge 148 | 首页加载 → 逐一点击 9 个分类筛选，全部返回 200 |
+| 12:20 | VS Code (Chrome/Electron) | 首页加载，返回 304（缓存命中） |
+
+说明 Vite 代理正常工作，前后端通信正常。
+
+### 13.5 管理员账号
+
+系统无预设管理员账号（数据库中没有 `role: admin` 的用户），所有用户默认 `student` 角色。
+
+管理员申请（AdminPage ApplicationsTab）需要已有 admin 来审批，形成鸡—蛋问题。首次使用需手动将一个用户升为 admin：
+
+```bash
+node -e "
+import prisma from '@campushub/shared/dist/utils/prisma.js';
+await prisma.user.update({ where: { id: <userId> }, data: { role: 'admin' } });
+await prisma.\$disconnect();
+"
+```
+
+本次创建的测试管理员：学号 `2024000002`，密码 `Admin1234`。
+
+### 13.6 文档更新
+
+- `CLAUDE.md`（根目录）：更新分支/状态信息，指向 P4，修正文件名引用
+- `frontend/CLAUDE.md`：全面重写（375→210行），从历史记录型转为项目快照型。砍掉过时的 A/B 分工、T05 实现规划、API 端点清单；新增页面速查表、关键模式代码片段、踩坑速查表
+- `frontend/README.md`：从 Vite 模板替换为项目简介
+- `frontend/DEVLOG.md`：追加本章 + 前端B 记录 + 补全 commits + 更新目录
