@@ -12,7 +12,7 @@ import { maskStudentId, maskPhone } from '@/utils/format';
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ nickname: '', college: '', phone: '', showRealName: false });
+  const [form, setForm] = useState({ nickname: '', college: '', phone: '', showRealName: false, name: '', email: '' });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -23,7 +23,7 @@ export default function ProfilePage() {
   if (!user) return null;
 
   const startEdit = () => {
-    setForm({ nickname: user.nickname, college: user.college || '', phone: user.phone || '', showRealName: user.showRealName });
+    setForm({ nickname: user.nickname, college: user.college || '', phone: user.phone || '', showRealName: user.showRealName, name: user.name || '', email: user.email || '' });
     setEditing(true);
   };
 
@@ -47,6 +47,8 @@ export default function ProfilePage() {
       college: form.college.trim() || undefined,
       phone: form.phone.trim() || undefined,
       showRealName: form.showRealName,
+      name: form.name.trim() || undefined,
+      email: form.email.trim() || undefined,
     });
     setSaving(false);
     if (res.data) {
@@ -128,6 +130,12 @@ export default function ProfilePage() {
               <TextField label="手机号" fullWidth value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 size="small" helperText="11位手机号" sx={{ mb: 2 }} />
+              <TextField label="真实姓名" fullWidth value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                size="small" helperText="半年内最多修改3次" sx={{ mb: 2 }} />
+              <TextField label="邮箱" fullWidth value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                size="small" helperText="半年内最多修改3次" sx={{ mb: 2 }} />
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Typography variant="body2" sx={{ mr: 2 }}>对外展示真实姓名</Typography>
                 <Chip
@@ -157,7 +165,7 @@ export default function ProfilePage() {
               <Divider />
               <InfoRow label="真实姓名" value={user.showRealName ? (user.name || '未设置') : '已隐藏'} />
               <Divider />
-              <InfoRow label="注册时间" value={new Date(user.createdAt).toLocaleDateString('zh-CN')} />
+              <InfoRow label="注册时间" value={user.createdAt ? new Date(user.createdAt).toLocaleDateString('zh-CN') : '加载中…'} />
             </>
           )}
         </CardContent>

@@ -10,6 +10,8 @@ export const updateUserSchema = z.object({
     .regex(/^1[3-9]\d{9}$/, '手机号格式不正确')
     .optional(),
   showRealName: z.boolean().optional(),
+  name: z.string().max(20).optional(),
+  email: z.string().email('邮箱格式不正确').max(100).optional(),
 });
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

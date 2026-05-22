@@ -44,6 +44,7 @@ export const userRepository = {
         creditScore: true,
         role: true,
         status: true,
+        createdAt: true,
       },
     });
   },
@@ -64,6 +65,29 @@ export const userRepository = {
     return prisma.user.update({
       where: { id },
       data: { lastLoginAt: new Date() },
+    });
+  },
+
+  async countRecentModifications(userId: number, fieldName: string, sinceMonths = 6): Promise<number> {
+    const since = new Date();
+    since.setMonth(since.getMonth() - sinceMonths);
+    return prisma.fieldModificationLog.count({
+      where: {
+        userId,
+        fieldName,
+        modifiedAt: { gte: since },
+      },
+    });
+  },
+
+  async logModification(userId: number, fieldName: string, oldValue: string | undefined, newValue: string | undefined) {
+    return prisma.fieldModificationLog.create({
+      data: {
+        userId,
+        fieldName,
+        oldValue: oldValue ?? null,
+        newValue: newValue ?? null,
+      },
     });
   },
 };

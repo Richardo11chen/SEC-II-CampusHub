@@ -75,6 +75,7 @@ model User {
   adminReviews    AdminApplication[]  @relation("AdminReviewer")
   refreshTokens   RefreshToken[]
   noShowRecords   NoShowRecord[]
+  fieldModLogs    FieldModificationLog[]
 
   @@index([nickname], name: "idx_nickname")
   @@map("User")
@@ -249,6 +250,20 @@ model RefreshToken {
   @@index([userId], name: "idx_user_id")
   @@index([expiresAt], name: "idx_expires_at")
   @@map("RefreshToken")
+}
+
+model FieldModificationLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  fieldName  String   @map("field_name") @db.VarChar(20)
+  oldValue   String?  @map("old_value") @db.VarChar(255)
+  newValue   String?  @map("new_value") @db.VarChar(255)
+  modifiedAt DateTime @default(now()) @map("modified_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, fieldName, modifiedAt])
+  @@map("FieldModificationLog")
 }
 
 model NoShowRecord {

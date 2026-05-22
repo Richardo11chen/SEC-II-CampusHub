@@ -87,6 +87,8 @@ export interface UpdateUserInput {
   college?: string;
   phone?: string;
   showRealName?: boolean;
+  name?: string;
+  email?: string;
 }
 
 /* ===== 需求 ===== */

@@ -4,7 +4,12 @@ import {
   encryptPhone,
   decryptPhone,
   reviewRepository,
+  userRepository,
 } from '@campushub/shared';
+import { BadRequestError } from '@campushub/shared';
+
+const RATE_LIMITED_FIELDS = ['college', 'phone', 'name', 'email'] as const;
+const MAX_CHANGES_PER_FIELD = 3;
 
 export const userService = {
   async getProfile(userId: number) {
@@ -56,8 +61,21 @@ export const userService = {
       college?: string;
       phone?: string;
       showRealName?: boolean;
+      name?: string;
+      email?: string;
     },
   ) {
+    // 对受限字段检查修改次数
+    for (const field of RATE_LIMITED_FIELDS) {
+      if (data[field] !== undefined) {
+        const count = await userRepository.countRecentModifications(userId, field);
+        if (count >= MAX_CHANGES_PER_FIELD) {
+          const fieldLabels: Record<string, string> = { college: '学院', phone: '手机号', name: '真实姓名', email: '邮箱' };
+          throw new BadRequestError(`${fieldLabels[field] || field}近6个月修改已达上限(${MAX_CHANGES_PER_FIELD}次)`);
+        }
+      }
+    }
+
     const updateData: Record<string, unknown> = {};
 
     if (data.nickname !== undefined) updateData.nickname = data.nickname;
@@ -65,11 +83,21 @@ export const userService = {
     if (data.college !== undefined) updateData.college = data.college;
     if (data.phone !== undefined) updateData.phoneEncrypted = encryptPhone(data.phone);
     if (data.showRealName !== undefined) updateData.showRealName = data.showRealName;
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.email !== undefined) updateData.email = data.email;
 
     await prisma.user.update({
       where: { id: userId },
       data: updateData,
     });
+
+    // 记录受限字段的修改日志
+    for (const field of RATE_LIMITED_FIELDS) {
+      if (data[field] !== undefined) {
+        const newValue = field === 'phone' ? data.phone : (data[field] as string | undefined);
+        await userRepository.logModification(userId, field, undefined, newValue);
+      }
+    }
 
     return this.getProfile(userId);
   },

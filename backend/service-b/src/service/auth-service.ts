@@ -95,6 +95,7 @@ export const authService = {
         avatar: user.avatar,
         creditScore: user.creditScore,
         role: user.role,
+        createdAt: user.createdAt.toISOString(),
       },
     };
   },
