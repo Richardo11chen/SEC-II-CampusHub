@@ -71,6 +71,8 @@ export default function ProfilePage() {
       if (updateRes.data) {
         updateUser(updateRes.data);
         setSnackbar({ open: true, message: '头像更新成功', severity: 'success' });
+      } else {
+        setSnackbar({ open: true, message: updateRes.error || '更新头像失败', severity: 'error' });
       }
     } else {
       setSnackbar({ open: true, message: res.error || '上传失败', severity: 'error' });
