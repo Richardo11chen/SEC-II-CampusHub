@@ -135,7 +135,7 @@ export default function LoginPage() {
 
             <Typography variant="body1" sx={{ mt: 3, textAlign: 'center' }}>
               还没有账号？
-              <Link component={RouterLink} to="/register" underline="hover" color="secondary" fontWeight={600}>
+              <Link component={RouterLink} to="/register" underline="hover" color="secondary" sx={{ fontWeight: 600 }}>
                 立即注册
               </Link>
             </Typography>

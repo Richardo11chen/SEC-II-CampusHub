@@ -52,8 +52,7 @@ export async function getOrder(id: number): Promise<{ data: OrderDetail | null; 
   try {
     const res = await api.get<ApiResponse<OrderDetail>>(`/orders/${id}`);
     if (res.data.data) {
-      const mapped = mapDemandToFlat(res.data.data as OrderDetail & { demand?: { id: number; title: string } });
-      return { data: { ...mapped, reward: Number(mapped.reward) } as unknown as OrderDetail, error: null };
+      return { data: { ...res.data.data, reward: Number(res.data.data.reward) }, error: null };
     }
     return { data: null, error: null };
   } catch (err: unknown) {

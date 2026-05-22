@@ -157,7 +157,7 @@ export default function RegisterPage() {
 
             <Typography variant="body1" sx={{ mt: 3, textAlign: 'center' }}>
               已有账号？
-              <Link component={RouterLink} to="/login" underline="hover" color="secondary" fontWeight={600}>去登录</Link>
+              <Link component={RouterLink} to="/login" underline="hover" color="secondary" sx={{ fontWeight: 600 }}>去登录</Link>
             </Typography>
           </CardContent>
         </Card>

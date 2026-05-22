@@ -6,6 +6,7 @@ import {
 import { Search as SearchIcon } from '@mui/icons-material';
 import { getDemands } from '@/api/demands';
 import DemandCard from '@/components/DemandCard';
+import { useAuth } from '@/hooks/useAuth';
 import { DEMAND_CATEGORIES } from '@/types';
 import type { DemandCategory, DemandSummary, DemandQueryParams, PaginatedData } from '@/types';
 
@@ -15,6 +16,7 @@ const ALL = '全部';
 type SortBy = NonNullable<DemandQueryParams['sortBy']>;
 
 export default function HomePage() {
+  const { user } = useAuth();
   const [keyword, setKeyword] = useState('');
   const [category, setCategory] = useState<string>(ALL);
   const [sortBy, setSortBy] = useState<SortBy>('newest');
@@ -63,14 +65,17 @@ export default function HomePage() {
   const [searchInput, setSearchInput] = useState('');
   useEffect(() => {
     const timer = setTimeout(() => {
-      setLoading(true);
-      setKeyword(searchInput);
-      setPage(1);
+      if (searchInput !== keyword) {
+        setLoading(true);
+        setKeyword(searchInput);
+        setPage(1);
+      }
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, keyword]);
 
   const handleCategoryChange = (cat: string) => {
+    if (cat === category) return;
     setLoading(true);
     setCategory(cat);
     setPage(1);
@@ -222,7 +227,7 @@ export default function HomePage() {
         <>
           <Stack spacing={1.5}>
             {data.items.map((demand) => (
-              <DemandCard key={demand.id} demand={demand} />
+              <DemandCard key={demand.id} demand={demand} currentUserId={user?.id} />
             ))}
           </Stack>
 

@@ -62,7 +62,15 @@ export default function OrderDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (!id) return null;
+  if (!id) {
+    return (
+      <Container maxWidth="sm" sx={{ pt: 4 }}>
+        <Alert severity="error" action={<Button size="small" onClick={() => navigate('/orders')}>返回订单列表</Button>}>
+          订单 ID 无效
+        </Alert>
+      </Container>
+    );
+  }
 
   const isPublisher = user?.id === order?.publisherId;
   const isProvider = user?.id === order?.providerId;

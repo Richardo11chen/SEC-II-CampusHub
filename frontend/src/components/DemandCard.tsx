@@ -18,11 +18,13 @@ const CATEGORY_COLOR: Record<string, string> = {
 
 interface DemandCardProps {
   demand: DemandSummary;
+  currentUserId?: number;
 }
 
-export default function DemandCard({ demand }: DemandCardProps) {
+export default function DemandCard({ demand, currentUserId }: DemandCardProps) {
   const navigate = useNavigate();
   const barColor = CATEGORY_COLOR[demand.category] || '#8A8A8A';
+  const showAcceptBadge = demand.status === '开放' && !!currentUserId && demand.publisher.id !== currentUserId;
 
   return (
     <Card
@@ -92,6 +94,14 @@ export default function DemandCard({ demand }: DemandCardProps) {
                   '50%': { opacity: 0.7 },
                 },
               }}
+            />
+          )}
+          {showAcceptBadge && (
+            <Chip
+              label="可接单"
+              size="small"
+              color="primary"
+              variant="filled"
             />
           )}
         </Box>

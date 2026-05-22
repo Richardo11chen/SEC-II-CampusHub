@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import {
   AccessTime as TimeIcon, Place as PlaceIcon, MonetizationOn as RewardIcon,
-  ArrowBack as BackIcon,
+  ArrowBack as BackIcon, HandshakeOutlined as HandshakeIcon,
 } from '@mui/icons-material';
 import { getDemand } from '@/api/demands';
 import { createOrder } from '@/api/orders';
@@ -153,20 +153,6 @@ export default function DemandDetailPage() {
             </Typography>
           </Box>
 
-          {/* 接单按钮 */}
-          {canTake && (
-            <Button
-              variant="contained"
-              color="secondary"
-              fullWidth
-              size="large"
-              sx={{ mt: 1, py: 1.5, fontSize: '1rem' }}
-              onClick={handleTakeOrder}
-              loading={takingOrder}
-            >
-              接单
-            </Button>
-          )}
         </CardContent>
       </Card>
 
@@ -194,6 +180,40 @@ export default function DemandDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 底部操作栏 — 接单 */}
+      {(canTake || (!user && demand.status === '开放' && !isOwn)) && (
+        <Box
+          sx={{
+            position: 'sticky',
+            bottom: 0,
+            mt: 2,
+            py: 2,
+            px: { xs: 2, sm: 3 },
+            bgcolor: '#FAF8FC',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            borderRadius: '16px 16px 0 0',
+            zIndex: 10,
+          }}
+        >
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            size="large"
+            startIcon={<HandshakeIcon />}
+            onClick={handleTakeOrder}
+            loading={takingOrder}
+            sx={{ py: 1.5, fontSize: '1.1rem', fontWeight: 700 }}
+          >
+            {user ? '接单' : '登录后接单'}
+          </Button>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+            报酬 {formatReward(demand.reward)}{user ? '' : ' · 登录后即可接单'}
+          </Typography>
+        </Box>
+      )}
 
       {/* 操作反馈 */}
       <Snackbar
