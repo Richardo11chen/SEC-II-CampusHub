@@ -17,6 +17,15 @@ export async function getUserReviews(userId: number, page = 1): Promise<{
   }
 }
 
+export async function getMyReview(orderId: number): Promise<{ data: Review | null; error: string | null }> {
+  try {
+    const res = await api.get<ApiResponse<Review | null>>('/reviews/my', { params: { orderId } });
+    return { data: res.data.data ?? null, error: null };
+  } catch (err: unknown) {
+    return { data: null, error: extractMessage(err, '获取评价失败') };
+  }
+}
+
 export async function createReview(input: CreateReviewInput): Promise<{ data: Review | null; error: string | null }> {
   try {
     const res = await api.post<ApiResponse<Review>>('/reviews', input);

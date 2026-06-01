@@ -19,13 +19,16 @@ export const demandController = {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
       const query = req.query as any;
+      const categories = query.category ? String(query.category).split(',').filter(Boolean) : undefined;
       const result = await demandService.getDemandList({
-        category: query.category,
+        categories: categories?.length ? categories as any : undefined,
         status: query.status,
         keyword: query.keyword,
         sortBy: query.sortBy,
         isUrgent: query.isUrgent === 'true' ? true : query.isUrgent === 'false' ? false : undefined,
         publisherId: query.publisherId ? Number(query.publisherId) : undefined,
+        minReward: query.minReward ? Number(query.minReward) : undefined,
+        maxReward: query.maxReward ? Number(query.maxReward) : undefined,
         page: query.page ? Number(query.page) : 1,
         pageSize: query.pageSize ? Number(query.pageSize) : 10,
       });

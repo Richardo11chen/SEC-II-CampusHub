@@ -72,12 +72,14 @@ const demandDetailSelect = {
 } as const;
 
 export interface DemandFilter {
-  category?: DemandCategory;
+  categories?: DemandCategory[];
   status?: DemandStatus;
   keyword?: string;
   sortBy?: 'newest' | 'oldest' | 'reward_high' | 'reward_low';
   isUrgent?: boolean;
   publisherId?: number;
+  minReward?: number;
+  maxReward?: number;
   page: number;
   pageSize: number;
 }
@@ -95,14 +97,19 @@ export const demandRepository = {
   },
 
   async findMany(filter: DemandFilter) {
-    const { category, status, keyword, sortBy, isUrgent, publisherId, page, pageSize } = filter;
+    const { categories, status, keyword, sortBy, isUrgent, publisherId, minReward, maxReward, page, pageSize } = filter;
     const where: Prisma.DemandWhereInput = {};
     const orderBy: Prisma.DemandOrderByWithRelationInput[] = [];
 
-    if (category) where.category = category;
+    if (categories?.length) where.category = { in: categories };
     if (status) where.status = status;
     if (isUrgent !== undefined) where.isUrgent = isUrgent;
     if (publisherId !== undefined) where.publisherId = publisherId;
+    if (minReward !== undefined || maxReward !== undefined) {
+      where.reward = {};
+      if (minReward !== undefined) where.reward.gte = minReward;
+      if (maxReward !== undefined) where.reward.lte = maxReward;
+    }
 
     if (keyword) {
       where.OR = [

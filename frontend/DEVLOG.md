@@ -24,6 +24,7 @@
 13. [P4 分支整合与维护](#13-p4-分支整合与维护)
 14. [聊天功能、通知红点与前端优化](#14-聊天功能通知红点与前端优化)
 15. [UI/UX 细节修复与需求订单状态](#15-uiux-细节修复与需求订单状态)
+16. [首页排序筛选重构与优化](#16-首页排序筛选重构与优化)
 
 ---
 
@@ -941,4 +942,78 @@ frontend/src/types/index.ts                  新增 new_message 通知类型
 backend/shared/src/repository/demand-repository.ts  #10 demandDetailSelect 加 order
 backend/service-a/src/service/demand-service.ts     #10 映射 currentOrder
 frontend/CLAUDE.md + DEVLOG.md               文档更新
+```
+
+---
+
+## 16. 首页排序筛选重构与优化
+
+> 日期：2026-06-01
+> 开发者：孙正奇
+
+### 16.1 背景
+
+首页原有排序用 `ToggleButtonGroup exclusive` 切换，三个按钮（最新/报酬↓/报酬↑）。有两个实际痛点：
+
+1. **ToggleButton 的 exclusive 模式存在反直觉行为**：选中状态下再次点击会传 null，handler 虽然用 `if (val)` 忽略掉了，但按钮会有一次视觉闪烁，用户感觉点了没反应
+2. **没有状态筛选**：已完成/已关闭的需求也出现在首页，排序看起来是乱的（"共 5 条需求"里 3 条已完成，按时间排序也看不出规律）
+
+同时在这次重构之前，经过了几轮小问题修复的反馈循环，积累了一些对 UI 细节一致的追求。
+
+### 16.2 设计方案讨论
+
+最初考虑过两种路线：
+
+**路线 A — 全前端处理**：一次性拉取全部需求（`pageSize=999`），筛选/排序/分页全在浏览器内存做。优点是后端零改动、切换筛选瞬间响应。缺点是数据量大了首次加载慢。
+
+**路线 B — 前后端各司其职**：所有筛选/排序参数通过 API 传给后端，后端负责查询和分页，前端只负责展示。
+
+用户最终否决了路线 A（"不规范"），选了路线 B。所以后端需要新增对多分类、报酬范围的支持。
+
+### 16.3 关键决策与过程
+
+**排序 UI**：参考 B 站的交互风格，两个独立按钮（发布时间 / 报酬），每个按钮内嵌箭头指示方向。用户点箭头切换升降序，点按钮名切换排序激活。实现时用了一个 `SortButton` 组件抽到函数外层，避免 ESLint `react-hooks/static-components` 报错。
+
+**分类多选**：`selectedCats: string[]` 数组管理。"全部"是独占重置，点击其他分类 toggle 加入/移除。后端接收逗号分隔 `?category=快递代取,学习辅导`，在前端 API 层用 `categories.join(',')` 转换。
+
+**状态筛选**：标签和值的分离是个坑。前端 Chip 显示"开放中"，但后端 `DemandStatus` 枚举值是 `'开放'`（非 '开放中'）。初版直接把 '开放中' 当 status 传过去，后端不认识，返回"参数错误"。修复：改为 `{ label: '开放中', value: '开放' }` 结构。
+
+**报酬输入框细节**：经过多次用户反馈迭代：
+
+| 轮次 | 反馈 | 修复 |
+|------|------|------|
+| 1 | 没居中、有上下箭头 | `textAlign: center` + CSS hide spin-button |
+| 2 | 没阻止负数 | `onChange` 过滤 `Number(v) < 0` |
+| 3 | 没阻止最小 > 最大 | 尝试 onChange 拦截，后改为"不拦截输入，后端/默认值处理" |
+| 4 | 选中时两框不同步紫色 | `rewardIdx === -1` 时统一 `borderColor: primary.main` |
+| 5 | 最大默认值应为无穷 | placeholder 改为 "∞"，后端不传 maxReward = 无上限 |
+
+**评价回显**（遗留问题 #2）：OrderDetailPage 原仅在提交成功后设 `existingReview`，刷新后回到 null。需要后端提供一个"查当前用户对某订单的评价"接口。幸运的是 `reviewRepository` 已有 `findByOrderAndUser` 方法，只需在 controller 层暴露为 `GET /api/reviews/my?orderId=X`。
+
+### 16.4 后端改动
+
+`demand-repository.ts` 的 `DemandFilter` 新增三个可选字段，`findMany` 中对应处理：
+
+```typescript
+categories?: DemandCategory[];   // → where.category = { in: categories }
+minReward?: number;              // → where.reward = { gte: minReward }
+maxReward?: number;              // → where.reward = { lte: maxReward }
+```
+
+controller 层从 query 解析：`category` 逗号分隔字符串 split 成数组，`minReward`/`maxReward` 转 number。
+
+### 16.5 涉及文件
+
+```
+backend/shared/src/repository/demand-repository.ts   新增 categories/minReward/maxReward
+backend/service-a/src/controller/demand-controller.ts 解析新参数
+backend/service-b/src/controller/review-controller.ts 新增 getMyReview
+backend/service-b/src/service/review-service.ts       新增 getMyReview
+backend/service-b/src/routes/review-routes.ts         注册 GET /my
+frontend/src/pages/HomePage.tsx                       完整重写排序/筛选
+frontend/src/pages/OrderDetailPage.tsx                加载已有评价
+frontend/src/api/reviews.ts                           新增 getMyReview
+frontend/src/types/index.ts                           更新 DemandQueryParams
+frontend/src/api/demands.ts                           转换 categories 数组
+frontend/CLAUDE.md + DEVLOG.md                        同步
 ```

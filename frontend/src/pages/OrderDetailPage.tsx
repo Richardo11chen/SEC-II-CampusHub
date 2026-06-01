@@ -9,7 +9,7 @@ import { ArrowBack as BackIcon, ChatOutlined as ChatIcon } from '@mui/icons-mate
 import {
   getOrder, completeOrder, confirmOrder, cancelOrder, disputeOrder,
 } from '@/api/orders';
-import { createReview } from '@/api/reviews';
+import { createReview, getMyReview } from '@/api/reviews';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDateTime, formatReward, orderStatusColor } from '@/utils/format';
 import type { OrderDetail, Review } from '@/types';
@@ -61,6 +61,14 @@ export default function OrderDetailPage() {
       .catch(() => setError('加载失败'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // 加载已有评价（订单已完成时）
+  useEffect(() => {
+    if (!order || order.status !== '已完成') return;
+    getMyReview(order.id).then((res) => {
+      if (res.data) setExistingReview(res.data);
+    });
+  }, [order]);
 
   if (!id) {
     return (

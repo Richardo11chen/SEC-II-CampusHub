@@ -11,6 +11,10 @@ import {
 const CREDIT_DELTA: Record<number, number> = { 5: 3, 4: 1, 3: 0, 2: -5, 1: -5 };
 
 export const reviewService = {
+  async getMyReview(userId: number, orderId: number) {
+    return reviewRepository.findByOrderAndUser(orderId, userId);
+  },
+
   async createReview(userId: number, data: { orderId: number; rating: number; content?: string }) {
     const order = await prisma.order.findUnique({
       where: { id: data.orderId },

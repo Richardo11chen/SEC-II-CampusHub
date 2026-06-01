@@ -10,7 +10,7 @@ CampusHub (校园互助服务平台) — React 18 + TypeScript + Vite 8 单页�
 
 | Page | Route | Key Features |
 |------|-------|-------------|
-| HomePage | `/` | 需求卡片列表 + 分类筛选(9类) + 排序(最新/报酬高低) + 搜索防抖 + 分页 + 骨架屏 |
+| HomePage | `/` | 需求卡片列表 + 排序(发布时间↕/报酬↕) + 分类多选 + 状态筛选(开放中/进行中/已完成) + 报酬范围(预设+自定义min/max) + 默认仅开放中 + 搜索防抖 + 分页 + 骨架屏 |
 | LoginPage | `/login` | 学号+密码登录，表单非空校验 |
 | RegisterPage | `/register` | 学号10位/密码8-32位混合/确认一致校验 |
 | DemandDetailPage | `/demands/:id` | 图片画廊 + 标签(分类/状态/紧急/匿名) + 发布者卡片 + 接单按钮 + 删除需求（发布者） |
@@ -18,7 +18,7 @@ CampusHub (校园互助服务平台) — React 18 + TypeScript + Vite 8 单页�
 | ProfilePage | `/users/me` | 头像上传 + 查看/编辑双模式 + 学号/手机号脱敏显示 |
 | UserPublicPage | `/users/:id` | 公开资料 + 信用分 + 评价列表(Rating) |
 | OrderListPage | `/orders` | Tab切换(我发布的/我承接的) + 未接单需求混排 + 状态筛选 + 分页 |
-| OrderDetailPage | `/orders/:id` | Stepper状态时间线 + 提交完成/确认/取消/纠纷 + 评价入口 + 聊天入口 |
+| OrderDetailPage | `/orders/:id` | Stepper状态时间线 + 提交完成/确认/取消/纠纷 + 评价入口(自动回显已有评价) + 聊天入口 |
 | ChatPage | `/orders/:id/chat` | 实时聊天 + 3s轮询新消息 + 分页加载历史 + 发送/Enter快捷发送 + 固定浮动布局 + 16px字体 + 圆角气泡 + 返回上一页 + 订单详情跳转按钮 |
 | NotificationsPage | `/notifications` | 通知列表 + 未读标记 + 红点再读 + 点击跳转订单 + 新消息通知 |
 | AdminPage | `/admin` | 5标签页(概览/用户管理/需求管理/纠纷处理/管理员申请) |

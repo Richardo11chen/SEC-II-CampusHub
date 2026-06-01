@@ -27,7 +27,13 @@ export async function getDemands(params?: DemandQueryParams): Promise<{
   data: PaginatedData<DemandSummary> | null; error: string | null
 }> {
   try {
-    const res = await api.get<ApiResponse<PaginatedData<DemandSummary>>>('/demands', { params });
+    // 将 categories 数组转为逗号分隔字符串（后端要求）
+    const { categories, ...rest } = params || {};
+    const apiParams: Record<string, unknown> = { ...rest };
+    if (categories?.length) {
+      apiParams.category = categories.join(',');
+    }
+    const res = await api.get<ApiResponse<PaginatedData<DemandSummary>>>('/demands', { params: apiParams });
     if (res.data.data) {
       return {
         data: { ...res.data.data, items: res.data.data.items.map(normalizeSummary) },

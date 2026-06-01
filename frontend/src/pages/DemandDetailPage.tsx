@@ -66,6 +66,7 @@ export default function DemandDetailPage() {
   const publisher = demand.publisher;
   const isOwn = user?.id === publisher.id;
   const canTake = demand.status === '开放' && !!user && !isOwn;
+  const isOrderParticipant = demand.currentOrder && (isOwn || user?.id === demand.currentOrder.provider.id);
 
   const handleTakeOrder = async () => {
     if (!user) {
@@ -212,14 +213,16 @@ export default function DemandDetailPage() {
                 状态：{demand.status}
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              size="small"
-              sx={{ bgcolor: '#fff', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
-              onClick={() => navigate(`/orders/${demand.currentOrder!.id}`)}
-            >
-              查看订单
-            </Button>
+            {isOrderParticipant && (
+              <Button
+                variant="contained"
+                size="small"
+                sx={{ bgcolor: '#fff', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
+                onClick={() => navigate(`/orders/${demand.currentOrder!.id}`)}
+              >
+                查看订单
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

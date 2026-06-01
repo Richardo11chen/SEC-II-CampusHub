@@ -172,12 +172,15 @@ export interface CreateDemandInput {
 }
 
 export interface DemandQueryParams {
-  category?: DemandCategory;
+  category?: string;
+  categories?: DemandCategory[];
   status?: DemandStatus;
   keyword?: string;
   sortBy?: 'newest' | 'oldest' | 'reward_high' | 'reward_low';
   isUrgent?: boolean;
   publisherId?: number;
+  minReward?: number;
+  maxReward?: number;
   page?: number;
   pageSize?: number;
 }
