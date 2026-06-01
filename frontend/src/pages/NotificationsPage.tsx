@@ -47,6 +47,7 @@ export default function NotificationsPage() {
   const handleClick = async (notif: Notification) => {
     if (!notif.isRead) {
       await markNotificationRead(notif.id);
+      window.dispatchEvent(new Event('notifications:update'));
       setData((prev) => {
         if (!prev) return prev;
         return {
@@ -60,7 +61,11 @@ export default function NotificationsPage() {
     }
 
     if (notif.relatedId) {
-      navigate(`/orders/${notif.relatedId}`);
+      if (notif.type === 'new_message') {
+        navigate(`/orders/${notif.relatedId}/chat`);
+      } else {
+        navigate(`/orders/${notif.relatedId}`);
+      }
     }
   };
 

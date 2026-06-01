@@ -62,7 +62,11 @@ export const demandService = {
       }
     }
 
-    return demand;
+    const { order, ...rest } = demand;
+    return {
+      ...rest,
+      currentOrder: order ?? null,
+    };
   },
 
   async updateDemand(

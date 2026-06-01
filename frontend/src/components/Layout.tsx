@@ -36,7 +36,7 @@ export default function Layout() {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // 轮询未读通知数（铃铛红点）
+  // 轮询未读通知数 + 监听刷新（铃铛红点）
   useEffect(() => {
     if (!isAuthenticated) return;
     const fetchUnread = () => {
@@ -46,7 +46,13 @@ export default function Layout() {
     };
     fetchUnread();
     const timer = setInterval(fetchUnread, 30000);
-    return () => clearInterval(timer);
+    window.addEventListener('notifications:update', fetchUnread);
+    window.addEventListener('focus', fetchUnread);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('notifications:update', fetchUnread);
+      window.removeEventListener('focus', fetchUnread);
+    };
   }, [isAuthenticated]);
 
   const currentTab = NAV_ITEMS.findIndex((item) => {

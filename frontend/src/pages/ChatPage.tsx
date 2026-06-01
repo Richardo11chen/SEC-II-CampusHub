@@ -159,12 +159,11 @@ export default function ChatPage() {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ position: 'fixed', top: '68px', left: '12px', right: '12px', bottom: '74px', zIndex: 1200, display: 'flex', flexDirection: 'column', borderRadius: 2, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
       {/* Header */}
       <Paper
-        square
-        elevation={1}
-        sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5, zIndex: 1 }}
+        elevation={0}
+        sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5, zIndex: 2 }}
       >
         <IconButton onClick={() => navigate(`/orders/${orderId}`)} size="small">
           <BackIcon />
@@ -187,7 +186,9 @@ export default function ChatPage() {
         onScroll={handleScroll}
         sx={{
           flex: 1,
+          minHeight: 0,
           overflowY: 'auto',
+          bgcolor: 'background.default',
           px: 2,
           py: 1.5,
           display: 'flex',
@@ -249,11 +250,20 @@ export default function ChatPage() {
                   bgcolor: isMe ? 'primary.light' : 'grey.200',
                   color: isMe ? '#fff' : 'text.primary',
                   fontWeight: isMe ? 500 : 400,
-                  borderRadius: 2,
+                  borderTopLeftRadius: 16,
+                  borderTopRightRadius: 16,
+                  borderBottomRightRadius: isMe ? 4 : 16,
+                  borderBottomLeftRadius: isMe ? 16 : 4,
                   wordBreak: 'break-word',
                 }}
               >
-                <Typography variant="body2">{msg.content}</Typography>
+                <Typography
+                  sx={{
+                    fontSize: '1rem',
+                    lineHeight: 1.5,
+                    color: 'inherit',
+                  }}
+                >{msg.content}</Typography>
               </Paper>
               <Typography variant="caption" color="text.disabled" sx={{ mt: 0.25, mx: 0.5 }}>
                 {formatDateTime(msg.createdAt)}
@@ -266,9 +276,8 @@ export default function ChatPage() {
 
       {/* Input bar */}
       <Paper
-        square
-        elevation={3}
-        sx={{ display: 'flex', alignItems: 'flex-end', gap: 1, px: 2, py: 1.5 }}
+        elevation={0}
+        sx={{ display: 'flex', alignItems: 'flex-end', gap: 1, px: 2, py: 1.5, borderTop: '1px solid', borderColor: 'divider' }}
       >
         <TextField
           fullWidth

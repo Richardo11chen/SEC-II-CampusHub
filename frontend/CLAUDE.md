@@ -19,7 +19,7 @@ CampusHub (校园互助服务平台) — React 18 + TypeScript + Vite 8 单页�
 | UserPublicPage | `/users/:id` | 公开资料 + 信用分 + 评价列表(Rating) |
 | OrderListPage | `/orders` | Tab切换(我发布的/我承接的) + 未接单需求混排 + 状态筛选 + 分页 |
 | OrderDetailPage | `/orders/:id` | Stepper状态时间线 + 提交完成/确认/取消/纠纷 + 评价入口 + 聊天入口 |
-| ChatPage | `/orders/:id/chat` | 实时聊天 + 3s轮询新消息 + 分页加载历史 + 发送/Enter快捷发送 |
+| ChatPage | `/orders/:id/chat` | 实时聊天 + 3s轮询新消息 + 分页加载历史 + 发送/Enter快捷发送 + 固定浮动布局 + 16px字体 + 圆角气泡 + 图片 Dialog 预览 |
 | NotificationsPage | `/notifications` | 通知列表 + 未读标记 + 红点再读 + 点击跳转订单 + 新消息通知 |
 | AdminPage | `/admin` | 5标签页(概览/用户管理/需求管理/纠纷处理/管理员申请) |
 
@@ -137,6 +137,11 @@ setSnackbar({ open: true, message: '操作成功', severity: 'success' });
 - Session restore: `useState` lazy initializer reads localStorage, then async-validates token via `getMe()` or `refresh()`
 - ESLint rule `react-hooks/set-state-in-effect` prohibits sync `setState` in effect body → use lazy initializer or move to async callback
 
+### Notification Badge (Layout bell)
+- Layout polls `getNotifications(1, 1).unreadCount` every 30s + on `window focus`
+- NotificationsPage dispatches `window.dispatchEvent(new Event('notifications:update'))` after marking read → Layout catches and refreshes badge
+- Different notification types route to different pages: `new_message` → `/orders/:id/chat`, others → `/orders/:id`
+
 ## MUI v9 vs v5/v6
 
 | v5/v6 | v9 |
@@ -157,6 +162,7 @@ setSnackbar({ open: true, message: '操作成功', severity: 'success' });
 | ESLint `no-explicit-any` in tests | Mock user with `as any` | Use typed `UserProfile` const |
 | ESLint `set-state-in-effect` | Sync `setState()` in `useEffect` body | Lazy initializer or move setState to `.then()` callback |
 | Vite stall after many restarts | Windows `TIME_WAIT` on port 5173 | `pnpm dev --port 5176` |
+| Chat bubble text gray on purple bg | Theme `body2: { color: TEXT_SECONDARY }` overrides Paper's `color: #fff` via CSS specificity | Remove `variant="body2"`, use `sx={{ color: 'inherit' }}` instead |
 
 ## Theme
 

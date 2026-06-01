@@ -23,6 +23,7 @@
 12. [前端B 开发记录](#12-前端b-开发记录)
 13. [P4 分支整合与维护](#13-p4-分支整合与维护)
 14. [聊天功能、通知红点与前端优化](#14-聊天功能通知红点与前端优化)
+15. [UI/UX 细节修复与需求订单状态](#15-uiux-细节修复与需求订单状态)
 
 ---
 
@@ -884,4 +885,56 @@ frontend/src/pages/ChatPage.tsx                   消息颜色修复
 frontend/src/types/index.ts                       新增 ChatMessage + new_message
 frontend/vite.config.ts                           代理 /api/messages
 frontend/package.json + pnpm-lock.yaml            依赖升级
+```
+
+---
+
+## 15. UI/UX 细节修复与需求订单状态
+
+> 日期：2026-06-01
+> 开发者：孙正奇
+
+### 15.1 修复项
+
+| # | 问题 | 改动 |
+|---|------|------|
+| 1 | 自己消息灰字看不清 | 去掉 `variant="body2"`，`sx.color: inherit` 避免主题 body2 覆盖 Paper 白色 |
+| 4 | 通知分类跳转 | `new_message` → `/orders/:id/chat`，其余 → `/orders/:id` |
+| 5 | 红点看完不消失 | 标记已读后 dispatch `notifications:update` 事件，Layout 监听该事件 + `focus` 事件刷新 |
+| 6 | 聊天气泡直角 | 独立 border 属性：自己右下角 4px 圆角，对方左下角 4px 圆角 |
+| 7 | 聊天字号偏小 | 消息内容 14px → 16px（1rem） |
+| 8 | 顶栏/输入框随页面滚动 | 改用 `position:fixed` 浮动卡片布局，填充 AppBar 与 BottomNav 之间，仅消息区滚动 |
+| 9 | 需求图片不可放大 | 点击主图弹出 Dialog，黑底全屏查看，右上角关闭按钮 |
+| 10 | 需求详情无订单状态 | 后端 `demandDetailSelect` 追加 `order` 关联，前端显示"xxx 已接单 + 查看订单"按钮 |
+
+### 15.2 关键修复细节
+
+**#1 颜色覆盖问题排查**（第 13 章踩坑的延续）：
+
+ChatPage 中自己消息气泡设置 `color: '#fff'`，但内部 `<Typography variant="body2">` 最终呈现灰色。根因：主题配置 `body2: { color: TEXT_SECONDARY }` 的 CSS 类选择器优先级高于 Paper 的 `color` 继承。修复后不再使用 `variant="body2"`，改为 `sx={{ fontSize: '1rem', color: 'inherit' }}`。
+
+**#5 通知红点刷新机制**：
+
+```
+NotificationsPage                    Layout
+  └─ markNotificationRead(id)         └─ 轮询 30s
+  └─ dispatch('notifications:update')  └─ 监听此事件 → 立即刷新
+                                       └─ 监听 window focus → 刷新
+```
+
+**#10 需求订单状态**：
+
+后端改动 `backend/shared/src/repository/demand-repository.ts` 的 `demandDetailSelect`，增加 `order` 关联查询（含 provider 信息），并在 `demand-service.ts` 中映射为 `currentOrder` 字段返回前端。前端 DemandDetailPage 在存在 `currentOrder` 时显示"xxx 已接单"卡片及"查看订单"跳转按钮。
+
+### 15.3 涉及文件
+
+```
+frontend/src/pages/ChatPage.tsx              #1 #6 #7 #8 颜色/圆角/字号/布局
+frontend/src/pages/NotificationsPage.tsx      #4 #5 通知跳转 + 事件派发
+frontend/src/components/Layout.tsx            #5 监听事件 + focus 刷新红点
+frontend/src/pages/DemandDetailPage.tsx       #9 #10 图片 Dialog + 订单状态
+frontend/src/types/index.ts                  新增 new_message 通知类型
+backend/shared/src/repository/demand-repository.ts  #10 demandDetailSelect 加 order
+backend/service-a/src/service/demand-service.ts     #10 映射 currentOrder
+frontend/CLAUDE.md + DEVLOG.md               文档更新
 ```

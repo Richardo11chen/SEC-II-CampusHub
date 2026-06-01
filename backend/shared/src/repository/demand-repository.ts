@@ -54,6 +54,21 @@ const demandDetailSelect = {
     },
     orderBy: { sortOrder: 'asc' as const },
   },
+  order: {
+    select: {
+      id: true,
+      providerId: true,
+      status: true,
+      provider: {
+        select: {
+          id: true,
+          nickname: true,
+          avatar: true,
+          creditScore: true,
+        },
+      },
+    },
+  },
 } as const;
 
 export interface DemandFilter {

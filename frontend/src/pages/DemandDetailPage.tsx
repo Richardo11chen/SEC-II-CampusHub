@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardContent, Chip, Avatar,
-  Button, Divider, CircularProgress, Alert, Snackbar,
+  Button, Divider, CircularProgress, Alert, Snackbar, Dialog,
+  DialogContent, IconButton,
 } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 import {
   AccessTime as TimeIcon, Place as PlaceIcon, MonetizationOn as RewardIcon,
   ArrowBack as BackIcon, HandshakeOutlined as HandshakeIcon,
@@ -26,6 +28,7 @@ export default function DemandDetailPage() {
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [takingOrder, setTakingOrder] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'error',
   });
@@ -105,7 +108,8 @@ export default function DemandDetailPage() {
               component="img"
               src={selectedImage}
               alt="需求图片"
-              sx={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block', bgcolor: 'grey.100' }}
+              onClick={() => setPreviewOpen(true)}
+              sx={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block', bgcolor: 'grey.100', cursor: 'pointer' }}
             />
           )}
           {demand.images.length > 1 && (
@@ -196,6 +200,30 @@ export default function DemandDetailPage() {
         </CardContent>
       </Card>
 
+      {/* 当前订单状态 */}
+      {demand.currentOrder && (
+        <Card sx={{ mt: 2, bgcolor: 'primary.main', color: '#fff' }}>
+          <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                当前订单：{demand.currentOrder.provider.nickname} 已接单
+              </Typography>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                状态：{demand.status}
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              size="small"
+              sx={{ bgcolor: '#fff', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
+              onClick={() => navigate(`/orders/${demand.currentOrder!.id}`)}
+            >
+              查看订单
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 底部操作栏 — 发布者删除 */}
       {isOwn && demand.status === '开放' && (
         <Box
@@ -263,6 +291,19 @@ export default function DemandDetailPage() {
           </Typography>
         </Box>
       )}
+
+      {/* 图片放大预览 */}
+      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth={false} sx={{ '& .MuiDialog-paper': { bgcolor: 'black', maxWidth: '95vw', maxHeight: '95vh' } }}>
+        <DialogContent sx={{ p: 0, position: 'relative' }}>
+          <IconButton
+            onClick={() => setPreviewOpen(false)}
+            sx={{ position: 'absolute', top: 8, right: 8, color: '#fff', bgcolor: 'rgba(0,0,0,0.4)', '&:hover': { bgcolor: 'rgba(0,0,0,0.6)' }, zIndex: 1 }}
+          >
+            <CloseIcon />
+          </IconButton>
+          <Box component="img" src={selectedImage} alt="预览" sx={{ maxWidth: '100%', maxHeight: '90vh', display: 'block' }} />
+        </DialogContent>
+      </Dialog>
 
       {/* 操作反馈 */}
       <Snackbar
