@@ -19,7 +19,7 @@ CampusHub (校园互助服务平台) — React 18 + TypeScript + Vite 8 单页�
 | UserPublicPage | `/users/:id` | 公开资料 + 信用分 + 评价列表(Rating) |
 | OrderListPage | `/orders` | Tab切换(我发布的/我承接的) + 未接单需求混排 + 状态筛选 + 分页 |
 | OrderDetailPage | `/orders/:id` | Stepper状态时间线 + 提交完成/确认/取消/纠纷 + 评价入口 + 聊天入口 |
-| ChatPage | `/orders/:id/chat` | 实时聊天 + 3s轮询新消息 + 分页加载历史 + 发送/Enter快捷发送 + 固定浮动布局 + 16px字体 + 圆角气泡 + 图片 Dialog 预览 |
+| ChatPage | `/orders/:id/chat` | 实时聊天 + 3s轮询新消息 + 分页加载历史 + 发送/Enter快捷发送 + 固定浮动布局 + 16px字体 + 圆角气泡 + 返回上一页 + 订单详情跳转按钮 |
 | NotificationsPage | `/notifications` | 通知列表 + 未读标记 + 红点再读 + 点击跳转订单 + 新消息通知 |
 | AdminPage | `/admin` | 5标签页(概览/用户管理/需求管理/纠纷处理/管理员申请) |
 

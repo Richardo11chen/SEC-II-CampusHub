@@ -926,10 +926,14 @@ NotificationsPage                    Layout
 
 后端改动 `backend/shared/src/repository/demand-repository.ts` 的 `demandDetailSelect`，增加 `order` 关联查询（含 provider 信息），并在 `demand-service.ts` 中映射为 `currentOrder` 字段返回前端。前端 DemandDetailPage 在存在 `currentOrder` 时显示"xxx 已接单"卡片及"查看订单"跳转按钮。
 
-### 15.3 涉及文件
+### 15.3 聊天返回导航优化
+
+原返回按钮固定跳转订单详情页（`/orders/:id`），用户可能从通知页、首页等多个入口进入聊天。改为 `navigate(-1)` 默认返回上一页，同时在顶栏右侧增加"订单详情"按钮提供显式跳转。
+
+### 15.4 涉及文件
 
 ```
-frontend/src/pages/ChatPage.tsx              #1 #6 #7 #8 颜色/圆角/字号/布局
+frontend/src/pages/ChatPage.tsx              #1 #6 #7 #8 #返回 颜色/圆角/字号/布局/后退
 frontend/src/pages/NotificationsPage.tsx      #4 #5 通知跳转 + 事件派发
 frontend/src/components/Layout.tsx            #5 监听事件 + focus 刷新红点
 frontend/src/pages/DemandDetailPage.tsx       #9 #10 图片 Dialog + 订单状态

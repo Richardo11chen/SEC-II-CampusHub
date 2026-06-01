@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Box, Typography, TextField, IconButton, CircularProgress, Alert,
+  Box, Typography, TextField, IconButton, Button, CircularProgress, Alert,
   Paper, Avatar,
 } from '@mui/material';
 import { ChatOutlined as SendIcon, ArrowBack as BackIcon } from '@mui/icons-material';
@@ -163,14 +163,17 @@ export default function ChatPage() {
       {/* Header */}
       <Paper
         elevation={0}
-        sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5, zIndex: 2 }}
+        sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 2, py: 1.5, zIndex: 2 }}
       >
-        <IconButton onClick={() => navigate(`/orders/${orderId}`)} size="small">
+        <IconButton onClick={() => navigate(-1)} size="small">
           <BackIcon />
         </IconButton>
-        <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', flex: 1 }}>
           {partnerName}
         </Typography>
+        <Button size="small" onClick={() => navigate(`/orders/${orderId}`)} sx={{ textTransform: 'none' }}>
+          订单详情
+        </Button>
       </Paper>
 
       {/* Error banner */}
