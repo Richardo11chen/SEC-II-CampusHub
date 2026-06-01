@@ -5,7 +5,7 @@ import {
   Divider, CircularProgress, Alert, Snackbar, Stepper, Step, StepLabel,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Rating,
 } from '@mui/material';
-import { ArrowBack as BackIcon } from '@mui/icons-material';
+import { ArrowBack as BackIcon, ChatOutlined as ChatIcon } from '@mui/icons-material';
 import {
   getOrder, completeOrder, confirmOrder, cancelOrder, disputeOrder,
 } from '@/api/orders';
@@ -80,6 +80,7 @@ export default function OrderDetailPage() {
   const showConfirm = isPublisher && status === '待确认';
   const showCancel = status === '进行中';
   const showDispute = status === '进行中' || status === '待确认';
+  const showChat = (status === '进行中' || status === '待确认') && (isPublisher || isProvider);
   const handleComplete = async () => {
     if (!order) return;
     setActionLoading(true);
@@ -288,6 +289,17 @@ export default function OrderDetailPage() {
                 sx={{ mb: 1 }}
               >
                 确认完成
+              </Button>
+            )}
+            {showChat && (
+              <Button
+                variant="outlined"
+                startIcon={<ChatIcon />}
+                fullWidth
+                onClick={() => navigate(`/orders/${order.id}/chat`)}
+                sx={{ mb: 1 }}
+              >
+                聊天
               </Button>
             )}
             {showCancel && (

@@ -235,6 +235,24 @@ export interface CreateReviewInput {
   content?: string;
 }
 
+/* ===== 聊天消息 ===== */
+
+export type MessageContentType = 'text' | 'image';
+
+export interface ChatMessage {
+  id: number;
+  orderId: number;
+  senderId: number;
+  contentType: MessageContentType;
+  content: string;
+  createdAt: string; // ISO date string
+  sender: {
+    id: number;
+    nickname: string;
+    avatar?: string | null;
+  };
+}
+
 /* ===== 通知 ===== */
 
 export type NotificationType =

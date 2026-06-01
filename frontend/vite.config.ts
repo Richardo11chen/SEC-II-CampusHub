@@ -14,6 +14,7 @@ export default defineConfig({
     proxy: {
       '/api/auth': 'http://localhost:3002',
       '/api/users': 'http://localhost:3002',
+      '/api/messages': 'http://localhost:3002',
       '/api/upload': 'http://localhost:3002',
       '/uploads': 'http://localhost:3002',
       '/api/reviews': 'http://localhost:3002',

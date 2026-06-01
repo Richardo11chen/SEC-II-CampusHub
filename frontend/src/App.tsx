@@ -11,6 +11,7 @@ import UserPublicPage from '@/pages/UserPublicPage';
 import OrderListPage from '@/pages/OrderListPage';
 import OrderDetailPage from '@/pages/OrderDetailPage';
 import NotificationsPage from '@/pages/NotificationsPage';
+import ChatPage from '@/pages/ChatPage';
 
 import AdminPage from '@/pages/AdminPage';
 
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/orders/:id" element={<OrderDetailPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/orders/:id/chat" element={<ChatPage />} />
         </Route>
       </Route>
     </Routes>
