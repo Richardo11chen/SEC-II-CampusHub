@@ -62,5 +62,6 @@ export { disputeRepository } from './repository/dispute-repository.js';
 export { noShowRecordRepository } from './repository/no-show-record-repository.js';
 export { reviewRepository } from './repository/review-repository.js';
 export { notificationRepository } from './repository/notification-repository.js';
+export { messageRepository } from './repository/message-repository.js';
 
 // ── Types (side-effect: extends Express.Request, picked up via tsconfig include) ──

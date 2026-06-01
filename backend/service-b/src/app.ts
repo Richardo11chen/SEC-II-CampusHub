@@ -16,6 +16,7 @@ import uploadRoutes from './routes/upload-routes.js';
 import reviewRoutes from './routes/review-routes.js';
 import notificationRoutes from './routes/notification-routes.js';
 import adminRoutes from './routes/admin-routes.js';
+import messageRoutes from './routes/message-routes.js';
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/messages', messageRoutes);
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 app.use('/uploads', express.static(UPLOAD_DIR));
