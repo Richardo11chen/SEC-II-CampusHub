@@ -29,7 +29,7 @@ src/
 ├── store/           # AuthContext（全局认证状态）
 ├── hooks/useAuth.ts # useAuth hook
 ├── components/      # 可复用组件（Layout/ProtectedRoute/DemandCard）
-├── pages/           # 11 个页面组件
+├── pages/           # 12 个页面组件（含 ChatPage）
 └── utils/format.ts  # 脱敏、日期格式化、状态→颜色映射
 ```
 

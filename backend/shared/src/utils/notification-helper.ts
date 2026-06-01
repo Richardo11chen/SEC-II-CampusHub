@@ -49,3 +49,13 @@ export async function notifyReviewReceived(orderId: number, toUserId: number, fr
     relatedId: orderId,
   });
 }
+
+export async function notifyNewMessage(orderId: number, toUserId: number, fromNickname: string) {
+  await notificationRepository.create({
+    userId: toUserId,
+    type: 'new_message',
+    title: '新消息',
+    content: `${fromNickname} 发来一条消息`,
+    relatedId: orderId,
+  });
+}

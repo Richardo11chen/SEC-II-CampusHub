@@ -54,15 +54,14 @@ export default function OrderListPage() {
 
   // 发布者 Tab — 同时拉取"未被接单"的需求
   useEffect(() => {
-    if (role !== 'publisher' || !user) {
-      setDemands([]);
-      return;
-    }
+    if (role !== 'publisher' || !user) return;
+    let cancelled = false;
     getDemands({ publisherId: user.id, status: '开放', pageSize: 50, page: 1 }).then((res) => {
-      if (res.data) {
+      if (!cancelled && res.data) {
         setDemands(res.data.items.filter((d) => d.status === '开放'));
       }
     });
+    return () => { cancelled = true; };
   }, [role, user]);
 
   const handleRoleChange = (_: unknown, val: string) => {

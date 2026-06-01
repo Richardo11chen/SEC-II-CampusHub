@@ -257,7 +257,7 @@ export interface ChatMessage {
 
 export type NotificationType =
   | 'order_taken' | 'order_completed' | 'order_confirmed'
-  | 'order_cancelled' | 'review_received' | 'dispute_update';
+  | 'order_cancelled' | 'review_received' | 'dispute_update' | 'new_message';
 
 export interface Notification {
   id: number;

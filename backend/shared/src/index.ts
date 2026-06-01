@@ -30,7 +30,7 @@ export { hashPassword, comparePassword, validatePasswordFormat } from './utils/p
 
 export { encryptPhone, decryptPhone, maskPhone } from './utils/crypto.js';
 
-export { notifyOrderTaken, notifyOrderCompleted, notifyOrderConfirmed, notifyOrderCancelled, notifyReviewReceived } from './utils/notification-helper.js';
+export { notifyOrderTaken, notifyOrderCompleted, notifyOrderConfirmed, notifyOrderCancelled, notifyReviewReceived, notifyNewMessage } from './utils/notification-helper.js';
 export { resolvePublisher } from './utils/anonymous-helper.js';
 
 export { default as logger } from './utils/logger.js';

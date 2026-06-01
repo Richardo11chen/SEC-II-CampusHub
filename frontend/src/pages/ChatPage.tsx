@@ -246,8 +246,9 @@ export default function ChatPage() {
                   px: 1.5,
                   py: 0.75,
                   maxWidth: '75%',
-                  bgcolor: isMe ? 'primary.main' : 'grey.200',
+                  bgcolor: isMe ? 'primary.light' : 'grey.200',
                   color: isMe ? '#fff' : 'text.primary',
+                  fontWeight: isMe ? 500 : 400,
                   borderRadius: 2,
                   wordBreak: 'break-word',
                 }}

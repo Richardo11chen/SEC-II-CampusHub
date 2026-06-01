@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CampusHub (校园互助服务平台) — React 18 + TypeScript + Vite 8 单页应用，面向南京大学学生。全部 11 个页面已完成开发（前端A + 前端B），部署于 `P4` 分支。
+CampusHub (校园互助服务平台) — React 18 + TypeScript + Vite 8 单页应用，面向南京大学学生。全部 12 个页面已完成开发（前端A + 前端B + 聊天），部署于 `P4` 分支。
 
 ## Page Inventory
 
@@ -13,13 +13,14 @@ CampusHub (校园互助服务平台) — React 18 + TypeScript + Vite 8 单页�
 | HomePage | `/` | 需求卡片列表 + 分类筛选(9类) + 排序(最新/报酬高低) + 搜索防抖 + 分页 + 骨架屏 |
 | LoginPage | `/login` | 学号+密码登录，表单非空校验 |
 | RegisterPage | `/register` | 学号10位/密码8-32位混合/确认一致校验 |
-| DemandDetailPage | `/demands/:id` | 图片画廊 + 标签(分类/状态/紧急/匿名) + 发布者卡片 + 接单按钮 |
+| DemandDetailPage | `/demands/:id` | 图片画廊 + 标签(分类/状态/紧急/匿名) + 发布者卡片 + 接单按钮 + 删除需求（发布者） |
 | CreateDemandPage | `/demands/new` | 发布表单 + 9分类 + 紧急/匿名开关 + 逐张图片上传 |
 | ProfilePage | `/users/me` | 头像上传 + 查看/编辑双模式 + 学号/手机号脱敏显示 |
 | UserPublicPage | `/users/:id` | 公开资料 + 信用分 + 评价列表(Rating) |
-| OrderListPage | `/orders` | Tab切换(我发布的/我承接的) + 状态筛选 + 分页 |
-| OrderDetailPage | `/orders/:id` | Stepper状态时间线 + 提交完成/确认/取消/纠纷 + 评价入口 |
-| NotificationsPage | `/notifications` | 通知列表 + 未读标记 + 点击跳转订单 |
+| OrderListPage | `/orders` | Tab切换(我发布的/我承接的) + 未接单需求混排 + 状态筛选 + 分页 |
+| OrderDetailPage | `/orders/:id` | Stepper状态时间线 + 提交完成/确认/取消/纠纷 + 评价入口 + 聊天入口 |
+| ChatPage | `/orders/:id/chat` | 实时聊天 + 3s轮询新消息 + 分页加载历史 + 发送/Enter快捷发送 |
+| NotificationsPage | `/notifications` | 通知列表 + 未读标记 + 红点再读 + 点击跳转订单 + 新消息通知 |
 | AdminPage | `/admin` | 5标签页(概览/用户管理/需求管理/纠纷处理/管理员申请) |
 
 测试覆盖：27 tests / 5 files（format / LoginPage / RegisterPage / ProtectedRoute / Layout）
@@ -55,6 +56,7 @@ pnpm build      # tsc -b && vite build
 | `/uploads/*` | `localhost:3002` | service-b |
 | `/api/reviews/*` | `localhost:3002` | service-b |
 | `/api/notifications/*` | `localhost:3002` | service-b |
+| `/api/messages/*` | `localhost:3002` | service-b |
 | `/api/admin/*` | `localhost:3002` | service-b |
 | `/api/demands/*` | `localhost:3001` | service-a |
 | `/api/orders/*` | `localhost:3001` | service-a |
@@ -65,7 +67,7 @@ pnpm build      # tsc -b && vite build
 src/
 ├── api/              # axios + 按模块拆分
 │   ├── client.ts     #   实例、401 自动刷新（Promise 并发锁）、refreshHandler 注入
-│   ├── auth.ts/users.ts/demands.ts/orders.ts/...
+│   ├── auth.ts/users.ts/demands.ts/orders.ts/messages.ts/...
 ├── types/index.ts    # 全部 TS 类型 + 枚举常量（DEMAND_CATEGORIES 等）
 ├── store/            # 全局认证状态（仅 AuthContext，无全局状态库）
 │   ├── authContext.ts    # Context 定义
@@ -76,7 +78,7 @@ src/
 │   ├── ProtectedRoute.tsx# 路由守卫（loading → 未登录跳转）
 │   ├── DemandCard.tsx    # 需求卡片（分类色条 + 脉冲紧急标签）
 │   └── PageTransition.tsx# 页面过渡动画
-├── pages/                # 11 个页面（见上表）
+├── pages/                # 12 个页面（见上表）
 ├── utils/
 │   └── format.ts         # 脱敏/日期/相对时间/报酬/状态→颜色
 ├── theme.ts              # MUI 主题（南大紫 #6B2FA0 主色）

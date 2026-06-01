@@ -76,6 +76,7 @@ export default function NotificationsPage() {
     order_cancelled: '取消',
     review_received: '评价',
     dispute_update: '纠纷',
+    new_message: '消息',
   };
 
   return (

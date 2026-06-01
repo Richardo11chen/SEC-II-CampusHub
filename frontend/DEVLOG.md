@@ -1,8 +1,8 @@
 # CampusHub 前端开发日志
 
-> 开发周期：2026-05-16 ~ 2026-05-22
+> 开发周期：2026-05-16 ~ 2026-06-01
 > 分支：`feat/frontend` → `P4`
-> 开发者：前端A（孙正奇），前端B（宋丞轩）
+> 开发者：前端A（孙正奇）、前端B（宋丞轩）、后端A（陈奕澎）
 > 说明：完整记录每次会话的关键决策、问题、解决方案和后续注意事项
 
 ---
@@ -22,6 +22,7 @@
 11. [附录](#11-附录)
 12. [前端B 开发记录](#12-前端b-开发记录)
 13. [P4 分支整合与维护](#13-p4-分支整合与维护)
+14. [聊天功能、通知红点与前端优化](#14-聊天功能通知红点与前端优化)
 
 ---
 
@@ -795,3 +796,92 @@ await prisma.\$disconnect();
 - `frontend/CLAUDE.md`：全面重写（375→210行），从历史记录型转为项目快照型。砍掉过时的 A/B 分工、T05 实现规划、API 端点清单；新增页面速查表、关键模式代码片段、踩坑速查表
 - `frontend/README.md`：从 Vite 模板替换为项目简介
 - `frontend/DEVLOG.md`：追加本章 + 前端B 记录 + 补全 commits + 更新目录
+
+---
+
+## 14. 聊天功能、通知红点与前端优化
+
+> 日期：2026-06-01
+> 开发者：陈奕澎（后端聊天API + 前端ChatPage），孙正奇（通知红点 + 聊天通知 + 颜色修复）
+
+### 14.1 新增功能
+
+**① 订单聊天**
+
+后端新增消息 API（`GET/POST /api/messages`，service-b），包含：
+- `message-controller.ts` / `message-service.ts` / `message-routes.ts` / `message-validators.ts`
+- `message-repository.ts`（shared 层）
+- 权限校验：只有订单双方（发布者/接单者）才能查看和发送消息
+
+前端新增 ChatPage（`/orders/:id/chat`，294 行），包含：
+- 3 秒轮询新消息（仅页面可见时）
+- 分页加载历史消息（"加载更多"）
+- 自动滚动到最新消息
+- Enter 快捷发送（Shift+Enter 换行）
+- 发送失败回填文本
+
+OrderDetailPage 新增"聊天"入口按钮。
+
+**② 通知铃铛红点**
+
+Layout 组件新增：
+- 每 30 秒轮询通知 API 获取 `unreadCount`
+- 铃铛图标用 MUI `Badge` 包裹，有未读时显示红点数字
+- 无需用户点进通知页就能看到提醒
+
+**③ 新消息通知**
+
+后端 `message-service.ts` 发消息后自动调用 `notifyNewMessage`，给接收方创建一条 `new_message` 类型通知，通知页显示"xxx 发来一条消息"。
+
+**④ 发布者需求管理**
+
+- OrderListPage "我发布的" Tab 混排显示未接单需求（黄色"开放中"标记）
+- DemandDetailPage 发布者可见"删除需求"按钮（带确认弹窗）
+- 订单取消后允许其他用户重新接单（后端乐观锁 + version 增量）
+
+### 14.2 Bug 修复
+
+**① 自己消息文字颜色看不清**
+
+ChatPage 中自己消息气泡背景从 `primary.main`（#6B2FA0）改为 `primary.light`（#8E5CBF），字重从 400 提到 500，白字在浅紫上更柔和易读。
+
+**② OrderListPage lint 错误**
+
+同学提交的代码中存在 `react-hooks/set-state-in-effect` 违规（同步 `setDemands([])` 在 effect 体）。修复：去掉同步 setState，用 cleanup `cancelled` flag 阻止过期异步更新。见 [13. 踩坑：setState 同步调用](#134-eslint-react-hooksset-state-in-effect)。
+
+### 14.3 协作冲突与 Git 历史整理
+
+**冲突背景**：
+1. 孙正奇提交 `f7bfe8c`（文档更新 + 误添加根目录 package.json/pnpm-lock.yaml）
+2. 陈奕澎基于此提交开始开发，提交了 `19f95db`（ngrok allowedHosts + 后端 pnpm-lock.yaml）
+3. 孙正奇发现根目录文件错误，force push `63d0f06` 替换掉 `f7bfe8c`
+4. 陈奕澎推送时产生 merge 冲突，自动生成 merge commit `7f82f4e`
+5. 陈奕澎又提交 `85f6abf` 再次删除根目录文件（重复操作）
+
+**解决**：本地 `git reset --hard 191dcfe` 回到头像修复提交，`git reset --soft HEAD~1` 保留文档变更，删除根目录文件，跑全流程后重提交 `63d0f06`。然后 force push 到远端。
+
+最终陈奕澎的 3 个实际功能提交（`1db41ae` + `cd3e6dc` + `9e2afc4` + `a333b94` + `32fefb1`）通过 `git pull --ff-only` 合并回本地。
+
+### 14.4 涉及文件清单
+
+```
+backend/shared/src/utils/notification-helper.ts  + notifyNewMessage 函数
+backend/shared/src/index.ts                      + 导出 notifyNewMessage
+backend/service-b/src/service/message-service.ts + 发消息后创建通知
+backend/service-b/src/controller/message-controller.ts  新增
+backend/service-b/src/service/message-service.ts        新增
+backend/service-b/src/routes/message-routes.ts          新增
+backend/service-b/src/validators/message-validators.ts  新增
+backend/shared/src/repository/message-repository.ts     新增
+backend/service-b/src/app.ts                      注册 /api/messages 路由
+frontend/src/pages/ChatPage.tsx                   新增（294 行）
+frontend/src/api/messages.ts                      新增
+frontend/src/components/Layout.tsx                铃铛红点 + 轮询
+frontend/src/pages/NotificationsPage.tsx          新增 new_message 标签
+frontend/src/pages/OrderListPage.tsx              修 lint 错误
+frontend/src/pages/OrderDetailPage.tsx            聊天入口
+frontend/src/pages/ChatPage.tsx                   消息颜色修复
+frontend/src/types/index.ts                       新增 ChatMessage + new_message
+frontend/vite.config.ts                           代理 /api/messages
+frontend/package.json + pnpm-lock.yaml            依赖升级
+```

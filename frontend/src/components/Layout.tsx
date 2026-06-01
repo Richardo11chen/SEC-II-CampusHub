@@ -1,7 +1,7 @@
-import { useState, type MouseEvent } from 'react';
+import { useState, useEffect, type MouseEvent } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
-  AppBar, Toolbar, Typography, IconButton, Avatar, Box,
+  AppBar, Toolbar, Typography, IconButton, Avatar, Box, Badge,
   BottomNavigation, BottomNavigationAction, Menu, MenuItem,
   ListItemIcon, ListItemText, Divider, Container,
 } from '@mui/material';
@@ -19,6 +19,7 @@ import {
   AdminPanelSettings as AdminIcon,
 } from '@mui/icons-material';
 import { useAuth } from '@/hooks/useAuth';
+import { getNotifications } from '@/api/notifications';
 
 const NAV_ITEMS = [
   { label: '首页', icon: <HomeOutlinedIcon />, activeIcon: <HomeIcon />, path: '/' },
@@ -33,6 +34,20 @@ export default function Layout() {
   const { user, isAuthenticated, logout } = useAuth();
 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // 轮询未读通知数（铃铛红点）
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const fetchUnread = () => {
+      getNotifications(1, 1).then((res) => {
+        if (res.data) setUnreadCount(res.data.unreadCount);
+      });
+    };
+    fetchUnread();
+    const timer = setInterval(fetchUnread, 30000);
+    return () => clearInterval(timer);
+  }, [isAuthenticated]);
 
   const currentTab = NAV_ITEMS.findIndex((item) => {
     if (item.path === '/') return location.pathname === '/';
@@ -83,7 +98,9 @@ export default function Layout() {
                 sx={{ mr: 0.5, transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.1)' } }}
                 onClick={() => navigate('/notifications')}
               >
-                <NotifIcon />
+                <Badge badgeContent={unreadCount} color="error">
+                  <NotifIcon />
+                </Badge>
               </IconButton>
               <IconButton
                 size="small"

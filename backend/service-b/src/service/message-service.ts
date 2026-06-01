@@ -3,6 +3,7 @@ import {
   messageRepository,
   NotFoundError,
   ForbiddenError,
+  notifyNewMessage,
 } from '@campushub/shared';
 
 export const messageService = {
@@ -44,6 +45,14 @@ export const messageService = {
       contentType: data.contentType || 'text',
       content: data.content,
     });
+
+    // 给接收方创建消息通知
+    const sender = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { nickname: true },
+    });
+    const recipientId = order.publisherId === userId ? order.providerId : order.publisherId;
+    await notifyNewMessage(data.orderId, recipientId, sender?.nickname || '未知用户');
 
     return message;
   },
