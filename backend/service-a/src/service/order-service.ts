@@ -18,8 +18,17 @@ export const orderService = {
     }
 
     const existingOrder = await orderRepository.findByDemandId(demandId);
+    let isReactivate = false;
     if (existingOrder) {
-      throw new ConflictError('该需求已被接单');
+      if (existingOrder.status !== OrderStatus['已取消']) {
+        throw new ConflictError('该需求已被接单');
+      }
+      // 已取消的订单：爽约者本人不能再次接单
+      if (existingOrder.cancelledBy === 'provider' && existingOrder.providerId === userId) {
+        throw new ConflictError('你已取消过该订单，不能再次接单');
+      }
+      // 其他人（发布者取消 / 不同接单者爽约）→ 允许重新激活
+      isReactivate = true;
     }
 
     const user = await userRepository.findById(userId);
@@ -54,6 +63,46 @@ export const orderService = {
 
       if (updated.count === 0) {
         throw new ConflictError('需求已被修改，请刷新后重试');
+      }
+
+      if (isReactivate) {
+        // 重新激活已取消的订单（乐观锁）
+        const reactivated = await tx.order.updateMany({
+          where: { demandId, version: existingOrder!.version },
+          data: {
+            providerId: userId,
+            status: OrderStatus['进行中'],
+            cancelledAt: null,
+            cancelledBy: null,
+            cancelReason: null,
+            version: { increment: 1 },
+          },
+        });
+
+        if (reactivated.count === 0) {
+          throw new ConflictError('该需求已被其他人抢先接单，请刷新后重试');
+        }
+
+        return tx.order.findUniqueOrThrow({
+          where: { demandId },
+          select: {
+            id: true,
+            demandId: true,
+            publisherId: true,
+            providerId: true,
+            status: true,
+            reward: true,
+            createdAt: true,
+            demand: {
+              select: {
+                id: true,
+                title: true,
+                category: true,
+                status: true,
+              },
+            },
+          },
+        });
       }
 
       return tx.order.create({
