@@ -7,8 +7,9 @@ import {
 import {
   AccessTime as TimeIcon, Place as PlaceIcon, MonetizationOn as RewardIcon,
   ArrowBack as BackIcon, HandshakeOutlined as HandshakeIcon,
+  DeleteOutlined as DeleteIcon,
 } from '@mui/icons-material';
-import { getDemand } from '@/api/demands';
+import { getDemand, deleteDemand } from '@/api/demands';
 import { createOrder } from '@/api/orders';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDateTime, formatReward, demandStatusColor } from '@/utils/format';
@@ -24,6 +25,7 @@ export default function DemandDetailPage() {
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [takingOrder, setTakingOrder] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'error',
   });
@@ -74,6 +76,19 @@ export default function DemandDetailPage() {
     } else {
       setTakingOrder(false);
       setSnackbar({ open: true, message: res.error || '操作失败', severity: 'error' });
+    }
+  };
+
+  const handleDeleteDemand = async () => {
+    if (!window.confirm('确定要删除这个需求吗？删除后不可恢复。')) return;
+    setDeleting(true);
+    const res = await deleteDemand(Number(id));
+    if (!res.error) {
+      setSnackbar({ open: true, message: '需求已删除', severity: 'success' });
+      setTimeout(() => navigate('/orders', { replace: true }), 1000);
+    } else {
+      setDeleting(false);
+      setSnackbar({ open: true, message: res.error, severity: 'error' });
     }
   };
 
@@ -181,8 +196,42 @@ export default function DemandDetailPage() {
         </CardContent>
       </Card>
 
+      {/* 底部操作栏 — 发布者删除 */}
+      {isOwn && demand.status === '开放' && (
+        <Box
+          sx={{
+            position: 'sticky',
+            bottom: 0,
+            mt: 2,
+            py: 2,
+            px: { xs: 2, sm: 3 },
+            bgcolor: '#FAF8FC',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            borderRadius: '16px 16px 0 0',
+            zIndex: 10,
+          }}
+        >
+          <Button
+            variant="outlined"
+            color="error"
+            fullWidth
+            size="large"
+            startIcon={<DeleteIcon />}
+            onClick={handleDeleteDemand}
+            loading={deleting}
+            sx={{ py: 1.5, fontSize: '1.1rem', fontWeight: 700 }}
+          >
+            删除需求
+          </Button>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+            删除后将无法恢复
+          </Typography>
+        </Box>
+      )}
+
       {/* 底部操作栏 — 接单 */}
-      {(canTake || (!user && demand.status === '开放' && !isOwn)) && (
+      {!isOwn && (canTake || (!user && demand.status === '开放')) && (
         <Box
           sx={{
             position: 'sticky',

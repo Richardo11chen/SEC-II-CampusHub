@@ -177,6 +177,7 @@ export interface DemandQueryParams {
   keyword?: string;
   sortBy?: 'newest' | 'oldest' | 'reward_high' | 'reward_low';
   isUrgent?: boolean;
+  publisherId?: number;
   page?: number;
   pageSize?: number;
 }

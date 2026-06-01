@@ -25,6 +25,7 @@ export const demandController = {
         keyword: query.keyword,
         sortBy: query.sortBy,
         isUrgent: query.isUrgent === 'true' ? true : query.isUrgent === 'false' ? false : undefined,
+        publisherId: query.publisherId ? Number(query.publisherId) : undefined,
         page: query.page ? Number(query.page) : 1,
         pageSize: query.pageSize ? Number(query.pageSize) : 10,
       });

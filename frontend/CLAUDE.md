@@ -28,7 +28,8 @@ CampusHub (校园互助服务平台) — React 18 + TypeScript + Vite 8 单页�
 
 ```bash
 # 后端（两服务分终端）
-cd backend
+# 修改 shared/src/ 后必须先编译
+cd backend/shared && npx tsc && cd ..
 node --import tsx/esm service-b/src/app.ts   # 3002 (auth/user/upload)
 node --import tsx/esm service-a/src/app.ts   # 3001 (demand/order)
 

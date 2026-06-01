@@ -40,6 +40,15 @@ export async function getDemands(params?: DemandQueryParams): Promise<{
   }
 }
 
+export async function deleteDemand(id: number): Promise<{ error: string | null }> {
+  try {
+    const res = await api.delete<ApiResponse<null>>(`/demands/${id}`);
+    return { error: res.data.data === null ? null : null };
+  } catch (err: unknown) {
+    return { error: extractMessage(err, '删除需求失败') };
+  }
+}
+
 export async function getDemand(id: number): Promise<{ data: Demand | null; error: string | null }> {
   try {
     const res = await api.get<ApiResponse<Demand>>(`/demands/${id}`);

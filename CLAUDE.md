@@ -113,3 +113,13 @@ curl -X POST http://localhost:3001/api/orders/1/dispute \
 ```
 
 也可以先用纯英文做快速验证，再换 GUI 工具（Postman/Hoppscotch）测中文场景。
+
+### 修改 shared 包后必须重新编译
+
+`@campushub/shared` 的 `"main"` 指向 `dist/index.js`，因此修改 `backend/shared/src/` 下的任何文件后，必须重新编译：
+
+```bash
+cd backend/shared && npx tsc
+```
+
+否则 service-a / service-b 运行时使用的是旧的编译产物，修改不生效。
