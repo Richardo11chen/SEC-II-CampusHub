@@ -1,32 +1,61 @@
 stages:
+  - install
   - lint
   - build
   - test
 
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - backend/node_modules/
+
+variables:
+  MYSQL_ROOT_PASSWORD: test_password
+  MYSQL_DATABASE: campushub_test
+  DATABASE_URL: mysql://root:test_password@mysql:3306/campushub_test
+
+backend-install:
+  stage: install
+  image: node:lts
+  script:
+    - cd backend && npm ci
+  artifacts:
+    paths:
+      - backend/node_modules/
+
 backend-lint:
   stage: lint
   image: node:lts
+  needs: [backend-install]
   script:
-    - cd backend
-    - npm ci
-    - echo "lint"
-    - echo "check"
+    - cd backend && npm run lint
 
 backend-build:
   stage: build
   image: node:lts
+  needs: [backend-install]
   script:
-    - cd backend
-    - npm ci
-    - echo "build"
+    - cd backend && npm run build
   artifacts:
     paths:
-      - backend/dist/
+      - backend/shared/dist/
+      - backend/service-a/dist/
+      - backend/service-b/dist/
 
 backend-test:
   stage: test
   image: node:lts
+  needs: [backend-build]
+  services:
+    - mysql:8.0
+  variables:
+    DATABASE_URL: mysql://root:test_password@mysql:3306/campushub_test
   script:
     - cd backend
-    - npm ci
-    - echo "test"
+    - cd shared && npx prisma db push --skip-generate && cd ..
+    - npm run test -- --reporter=junit --reporter=verbose
+  artifacts:
+    reports:
+      junit: backend/test-results/*.xml
+    paths:
+      - backend/coverage/
