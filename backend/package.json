@@ -7,15 +7,24 @@
     "dev": "npm run dev -w service-a",
     "dev:a": "npm run dev -w service-a",
     "dev:b": "npm run dev -w service-b",
-    "build": "npm run build -w shared && npm run build -w service-a",
+    "build": "npm run build -w shared && npm run build -w service-a && npm run build -w service-b",
     "build:b": "npm run build -w service-b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "npx tsc --noEmit -p shared/tsconfig.json && npx tsc --noEmit -p service-a/tsconfig.json && npx tsc --noEmit -p service-b/tsconfig.json",
     "prisma:generate": "npm run prisma:generate -w shared",
     "prisma:push": "npm run prisma:push -w shared",
     "prisma:seed": "npm run prisma:seed -w shared",
     "prisma:studio": "npm run prisma:studio -w shared"
   },
   "devDependencies": {
+    "@types/supertest": "^6.0.0",
+    "@vitest/coverage-v8": "^4.0.0",
     "concurrently": "^9.1.0",
-    "typescript": "^5.8.3"
+    "supertest": "^7.0.0",
+    "typescript": "^5.8.3",
+    "vitest": "^4.0.0",
+    "vitest-mock-extended": "^3.0.0"
   }
 }
