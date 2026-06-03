@@ -217,6 +217,7 @@ describe('DemandDetailPage', () => {
   });
 
   it('deletes demand and navigates on confirm', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     (demandsApi.getDemand as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: makeDemand({ publisher: { id: 200, nickname: '自己', avatar: undefined, creditScore: 70 } }),
@@ -226,7 +227,9 @@ describe('DemandDetailPage', () => {
     renderPage({ user: { ...mockUserAlt, id: 200 } });
 
     await userEvent.click(await screen.findByText('删除需求'));
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/orders', { replace: true }));
+    vi.advanceTimersByTime(1100);
+    expect(mockNavigate).toHaveBeenCalledWith('/orders', { replace: true });
     expect(demandsApi.deleteDemand).toHaveBeenCalledWith(42);
+    vi.useRealTimers();
   });
 });

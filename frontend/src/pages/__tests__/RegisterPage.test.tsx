@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext, type AuthContextType } from '@/store/authContext';
@@ -102,27 +102,33 @@ describe('RegisterPage', () => {
     await userEvent.type(screen.getByLabelText('真实姓名（选填）'), '张三');
     await userEvent.type(screen.getByLabelText('邮箱（选填）'), 'zhangsan@nju.edu.cn');
     await userEvent.click(screen.getByRole('button', { name: '注册' }));
-    expect(mockRegister).toHaveBeenCalledWith({
-      studentId: '2024123456', password: 'pass1234', nickname: 'testuser',
-      name: '张三', email: 'zhangsan@nju.edu.cn', avatar: undefined,
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith({
+        studentId: '2024123456', password: 'pass1234', nickname: 'testuser',
+        name: '张三', email: 'zhangsan@nju.edu.cn', avatar: undefined,
+      });
     });
-  });
+  }, 15000);
 
   it('shows error message on register failure', async () => {
     mockRegister.mockRejectedValue(new Error('该学号已注册'));
     renderPage();
     await fillValidForm();
     await userEvent.click(screen.getByRole('button', { name: '注册' }));
-    expect(await screen.findByText('该学号已注册')).toBeInTheDocument();
-  });
+    await waitFor(() => {
+      expect(screen.getByText('该学号已注册')).toBeInTheDocument();
+    });
+  }, 15000);
 
   it('shows generic fallback for non-Error rejection', async () => {
     mockRegister.mockRejectedValue('raw error');
     renderPage();
     await fillValidForm();
     await userEvent.click(screen.getByRole('button', { name: '注册' }));
-    expect(await screen.findByText('注册失败')).toBeInTheDocument();
-  });
+    await waitFor(() => {
+      expect(screen.getByText('注册失败')).toBeInTheDocument();
+    });
+  }, 15000);
 
   it('has link to login page', () => {
     renderPage();

@@ -27,6 +27,7 @@
 16. [首页排序筛选重构与优化](#16-首页排序筛选重构与优化)
 17. [单元测试扩展](#17-单元测试扩展)
 18. [测试持续推进 + CI 优化](#18-测试持续推进--ci-优化)
+19. [测试持续推进(二) + CI 修复](#19-测试持续推进二--ci-修复)
 
 ---
 
@@ -1166,5 +1167,66 @@ frontend/src/pages/__tests__/LoginPage.test.tsx         扩展：loading/错误�
 frontend/src/pages/__tests__/RegisterPage.test.tsx      扩展：选填字段/catch块
 frontend/src/pages/__tests__/DemandDetailPage.test.tsx  新增：全组件测试
 frontend/src/store/__tests__/AuthProvider.test.tsx      新增：认证状态机
+frontend/CLAUDE.md + DEVLOG.md                          同步
+```
+
+---
+
+## 19. 测试持续推进(二) + CI 修复
+
+> 日期：2026-06-03
+> 内容：OrderDetailPage(状态流转) + NotificationsPage(通知/筛选) + OrderListPage(Tab/混排) + CI pnpm 修复
+
+### 19.1 测试进展
+
+| 文件 | 用例数 | 覆盖要点 |
+|------|--------|---------|
+| `OrderDetailPage.test.tsx` | 20 | 订单状态流转(进行中→待确认→已完成)、操作按钮(提交完成/确认完成/取消/纠纷/聊天)、角色权限(publisher vs provider)、评价区(表单/回显)、对话框(取消/纠纷) |
+| `NotificationsPage.test.tsx` | 11 | 列表渲染/未读标记/标记已读+dispatch事件/按类型导航(new_message→chat/其他→order)/筛选全部/未读/查看按钮 |
+| `OrderListPage.test.tsx` | 11 | Tab切换(publisher/provider)、状态筛选(6个Chip)、开放需求混排+跳转、provider Tab不拉取开放需求 |
+
+### 19.2 关键技术与坑
+
+**MUI Rating 在 jsdom 中无法点击**：`getAllByRole('radio')` 找到的星号 radio input 在 jsdom 中有 `pointer-events: none`，`userEvent.click` 和 `fireEvent.click` 都无法触发的 onChange。最终策略：验证提交按钮初始 disabled 态 + 评价表单渲染，跳过星号交互。
+
+**"进行中" 文本重复**：OrderDetailPage 的 status chip 和 Stepper 步骤中同时出现"进行中"。改用 `getAllByText` 确认至少出现一次，而非 `getByText`。
+
+**Tabs onChange 类型**：MUI Tabs 的 onChange 签名传 `(event, value)`，value 可能是 `string` 或 `number`。`handleRoleChange` 中 `val as 'publisher' | 'provider'` 在测试中触发正常。
+
+**创建测试辅助函数时的 OrderStatus vs DemandStatus**：`makeOrder` 中的 `status` 参数为 `OrderStatus`，但内嵌的 `demand` 字段要求 `DemandStatus`。`'进行中'` 在两个类型中都存在，但需要用 `as DemandStatus` 转换。
+
+### 19.3 CI 修复
+
+首次优化后的 CI 流水线发现 pnpm 未预装在 `node:lts` 镜像中。修复：`lint/build/test` 每个 job 加 `before_script: npm install -g pnpm`（仅 ~3s），node_modules 仍从 install stage 的 artifacts 复用。
+
+### 19.4 测试全景（截至 2026-06-03）
+
+```
+171 tests | 14 files
+  format.test.ts             27  格式/脱敏/相对时间/状态→颜色
+  DemandCard.test.tsx        16  渲染态/标签逻辑/导航
+  Layout.test.tsx            16  AppBar/菜单/通知铃铛/登出/管理员
+  OrderDetailPage.test.tsx   20  订单状态流转/操作按钮/评价
+  client.test.ts             14  axios 401 刷新队列
+  DemandDetailPage.test.tsx  13  图片/接单/删除/订单卡片
+  NotificationsPage.test.tsx 11  通知/标记已读/筛选/导航
+  AuthProvider.test.tsx      11  认证状态机
+  OrderListPage.test.tsx     11  Tab切换/状态筛选/混排
+  RegisterPage.test.tsx      10  表单校验 100% 分支
+  LoginPage.test.tsx          7  登录表单/loading/错误态
+  PageTransition.test.tsx     5  动画容器渲染
+  ProtectedRoute.test.tsx     3  路由守卫
+  useAuth.test.tsx            2  Hook 正常/越界
+```
+
+整体 statements 覆盖率 **9.25% → 37.6%**。
+
+### 19.5 涉及文件
+
+```
+.gitlab/frontend.yml                                   CI 修复：before_script 装 pnpm
+frontend/src/pages/__tests__/OrderDetailPage.test.tsx  新增：订单状态流转
+frontend/src/pages/__tests__/NotificationsPage.test.tsx 新增：通知列表
+frontend/src/pages/__tests__/OrderListPage.test.tsx     新增：订单列表
 frontend/CLAUDE.md + DEVLOG.md                          同步
 ```
