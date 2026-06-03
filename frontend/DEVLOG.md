@@ -28,6 +28,7 @@
 17. [单元测试扩展](#17-单元测试扩展)
 18. [测试持续推进 + CI 优化](#18-测试持续推进--ci-优化)
 19. [测试持续推进(二) + CI 修复](#19-测试持续推进二--ci-修复)
+20. [测试持续推进(三)](#20-测试持续推进三)
 
 ---
 
@@ -1228,5 +1229,62 @@ frontend/CLAUDE.md + DEVLOG.md                          同步
 frontend/src/pages/__tests__/OrderDetailPage.test.tsx  新增：订单状态流转
 frontend/src/pages/__tests__/NotificationsPage.test.tsx 新增：通知列表
 frontend/src/pages/__tests__/OrderListPage.test.tsx     新增：订单列表
+frontend/CLAUDE.md + DEVLOG.md                          同步
+```
+
+---
+
+## 20. 测试持续推进(三)
+
+> 日期：2026-06-03
+> 内容：UserPublicPage + ProfilePage + CreateDemandPage 单元测试
+
+### 20.1 新增测试
+
+| 文件 | 用例数 | 覆盖要点 |
+|------|--------|---------|
+| `UserPublicPage.test.tsx` | 11 | 用户公开资料展示(昵称/学分/学院/姓名)、评价列表渲染、空评价 |
+| `ProfilePage.test.tsx` | 12 | 查看模式脱敏、编辑模式切换、表单校验、保存、头像上传 |
+| `CreateDemandPage.test.tsx` | 8 | 表单字段渲染、空标题/无分类校验、发布成功/失败、图片上传 |
+
+### 20.2 关键技术与坑
+
+**`document.querySelector` 返回类型**：在 tsconfig 严格模式下返回 `Element` 而非 `HTMLElement`，传给 `userEvent.upload` 需 `as HTMLElement`。
+
+**`PublicUserProfile.name` 为 required**：mock 数据显式提供 `name: null`。
+
+**`type="number"` 在 jsdom 的限制**：jsdom 的 number input 过滤非数字字符（如 `-`），导致负数校验无法在 jsdom 测试。
+
+### 20.3 测试全景（截至 2026-06-03）
+
+```
+200 tests | 17 files
+  format.test.ts             27  格式/脱敏/相对时间
+  DemandCard.test.tsx        16  渲染态/标签逻辑/导航
+  Layout.test.tsx            16  AppBar/菜单/通知/登出
+  OrderDetailPage.test.tsx   20  订单状态流转/评价
+  client.test.ts             14  axios 401 刷新队列
+  DemandDetailPage.test.tsx  13  图片/接单/删除
+  NotificationsPage.test.tsx 11  通知/标记已读/筛选
+  AuthProvider.test.tsx      11  认证状态机
+  OrderListPage.test.tsx     11  Tab切换/状态筛选
+  UserPublicPage.test.tsx    11  公开资料/评价列表
+  RegisterPage.test.tsx      10  表单校验 100% 分支
+  ProfilePage.test.tsx       12  编辑模式/保存/头像
+  CreateDemandPage.test.tsx   8  表单验证/图片上传
+  LoginPage.test.tsx          7  登录表单/loading
+  PageTransition.test.tsx     5  动画容器渲染
+  ProtectedRoute.test.tsx     3  路由守卫
+  useAuth.test.tsx            2  Hook 正常/越界
+```
+
+整体 statements 覆盖率 **9.25% → 47.74%**。
+
+### 20.4 涉及文件
+
+```
+frontend/src/pages/__tests__/UserPublicPage.test.tsx    新增：公开资料
+frontend/src/pages/__tests__/ProfilePage.test.tsx       新增：个人资料编辑
+frontend/src/pages/__tests__/CreateDemandPage.test.tsx  新增：发布需求
 frontend/CLAUDE.md + DEVLOG.md                          同步
 ```

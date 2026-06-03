@@ -18,7 +18,7 @@ pnpm build      # tsc -b && vite build
 - **UI**: MUI v9 (Material Design)，南大紫主题
 - **路由**: react-router-dom v7
 - **HTTP**: axios（401 自动刷新 + 并发锁）
-- **测试**: Vitest + jsdom + @testing-library (171 tests, 覆盖率 v8)
+- **测试**: Vitest + jsdom + @testing-library (200 tests, 覆盖率 v8)
 
 ## 项目结构
 
