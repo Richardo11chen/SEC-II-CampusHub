@@ -25,6 +25,7 @@
 14. [聊天功能、通知红点与前端优化](#14-聊天功能通知红点与前端优化)
 15. [UI/UX 细节修复与需求订单状态](#15-uiux-细节修复与需求订单状态)
 16. [首页排序筛选重构与优化](#16-首页排序筛选重构与优化)
+17. [单元测试扩展](#17-单元测试扩展)
 
 ---
 
@@ -1016,4 +1017,89 @@ frontend/src/api/reviews.ts                           新增 getMyReview
 frontend/src/types/index.ts                           更新 DemandQueryParams
 frontend/src/api/demands.ts                           转换 categories 数组
 frontend/CLAUDE.md + DEVLOG.md                        同步
+
+---
+
+## 17. 单元测试扩展（稳扎稳打）
+
+> 日期：2026-06-03
+> 背景：完成全部前端功能后，系统化补写高质量单元测试
+
+### 17.1 为什么要写（而不是"先写完再补"）
+
+之前的测试策略是"先验证核心功能"：LoginPage、RegisterPage、ProtectedRoute 覆盖了基本的路由守卫和表单校验。但项目后期对纯函数（`format.ts`）、基础设施（axios 401 刷新）、可复用组件（`DemandCard`）的覆盖率很低——这些都是高稳定性收益低测试成本的模块。
+
+### 17.2 测试策略分层
+
+```
+Layer 1  纯函数（format.ts）         — 无依赖，易覆盖 ← 首选
+Layer 2  基础设施（client.ts）        — mock 外部库，测全路径
+Layer 3  展示组件（DemandCard, PageTransition） — props → UI 断言
+Layer 4  Hook（useAuth）              — 正常 + 越界路径
+Layer 5  页面（LoginPage等已有）      — 已有，维持即可
+```
+
+核心原则：
+- **纯函数不 mock**：`formatReward`、`demandStatusColor` 等直接用真实实现
+- **非确定性 mock**：`formatRelativeTime` 依赖 `Date.now` → mock 返回固定值
+- **外部库 mock**：`useNavigate` 全局 mock，axios 用 `vi.hoisted` 模式防止 hoisting 问题
+- **覆盖率不设目标**：不追求某一比例，而是逐个文件判断"值不值得测"
+
+### 17.3 新增/修改文件
+
+| 文件 | 类型 | 用例数 | 覆盖情况 |
+|------|------|--------|---------|
+| `format.test.ts` | 扩展 | 7→27 | 全部 8 函数 100%，含边界（6位字符、午夜、35天回落） |
+| `DemandCard.test.tsx` | 新增 | 16 | 100% stmts，组合渲染态：紧急/匿名/可接单/非登录/自己/类别循环 |
+| `client.test.ts` | 新增 | 14 | ~92% stmts：401 重试/刷新队列/并发去重/auth端点特殊处理 |
+| `useAuth.test.tsx` | 新增 | 2 | 100%：正常返回 + 越界抛错 |
+| `PageTransition.test.tsx` | 新增 | 5 | 100%：结构渲染 + 空子元素 |
+
+### 17.4 关键技术与坑
+
+**vi.hoisted 模式（必须）**：vitest 的 `vi.mock` 工厂函数会被提升到文件顶部，引用外部变量会报 `ReferenceError`。必须用 `vi.hoisted()` 包裹所有需要在 mock 工厂中使用的变量：
+
+```typescript
+const { mockAxiosInstance } = vi.hoisted(() => {
+  const instance = vi.fn();
+  (instance as any).interceptors = { request: { use: vi.fn() }, response: { use: vi.fn() } };
+  return { mockAxiosInstance: instance };
+});
+vi.mock('axios', () => ({ default: { create: vi.fn(() => mockAxiosInstance) } }));
+```
+
+**React 19 + renderHook 异常测试**：React 19 下 `renderHook(() => useAuth())` 直接同步抛出错误（而非存入 `result.error`），所以用 `expect(() => renderHook(...)).toThrow()`。
+
+**MUI sx 生成的 CSS 类不可 inline 断言**：`sx={{ '& > *': { animationDelay: '60ms' } }}` 经由 emotion 编译为 CSS 类名，jsdom 中拿不到 `element.style.animationDelay`（为空字符串）。这类 CSS 视觉特性更适合端到端测试，单元测试只验证结构。
+
+**覆盖率配置**：在 `vite.config.ts` 中配置 `coverage: { provider: 'v8', reporter: ['text'], include: ['src/**/*.{ts,tsx}'], exclude: [...] }`。由于 vitest 4.1.7 和 @vitest/coverage-v8 4.1.8 版本不一致有 warning，后续需统一升级。
+
+### 17.5 测试全景（截至 2026-06-03）
+
+```
+84 tests | 9 files
+  format.test.ts         — 27  格式/脱敏/相对时间/状态→颜色
+  DemandCard.test.tsx    — 16  渲染态/标签逻辑/导航
+  client.test.ts         — 14  axios 401 刷新队列
+  PageTransition.test.tsx—  5  动画容器渲染
+  useAuth.test.tsx       —  2  Hook 正常/越界
+  RegisterPage.test.tsx  —  7  表单校验
+  LoginPage.test.tsx     —  4  登录表单
+  Layout.test.tsx        —  4  AppBar + badge
+  ProtectedRoute.test.tsx—  3  路由守卫
+```
+
+整体 statements 覆盖率 ~13.6%（主要受限于 12 个页面组件和 API 层薄封装尚未覆盖）。
+
+### 17.6 后续可测方向
+
+当前测试策略偏向"测试成本低、稳定收益高"的模块。以下模块测试成本更高，但业务价值大：
+
+- **HomePage.tsx** — 排序/筛选状态机 + 分页 + 防抖，但需要 mock 大量 API
+- **OrderDetailPage.tsx** — 订单状态流转（完成→确认→纠纷）的业务逻辑
+- **ChatPage.tsx** — 轮询 + 分页历史 + Enter 发送
+- **API 层（auth.ts / demands.ts / orders.ts）** — 薄 axios 封装，需 mock client 实例
+
+以上都需要更大的 mocking 投入，留待后续按需补充。
+
 ```
