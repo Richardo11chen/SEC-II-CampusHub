@@ -23,7 +23,7 @@ CampusHub (校园互助服务平台) — React 18 + TypeScript + Vite 8 单页�
 | NotificationsPage | `/notifications` | 通知列表 + 未读标记 + 红点再读 + 点击跳转订单 + 新消息通知 |
 | AdminPage | `/admin` | 5标签页(概览/用户管理/需求管理/纠纷处理/管理员申请) |
 
-测试覆盖：200 tests / 17 files（format / DemandCard / PageTransition / Layout / client / AuthProvider / DemandDetailPage / OrderDetailPage / OrderListPage / NotificationsPage / UserPublicPage / ProfilePage / CreateDemandPage / LoginPage / RegisterPage / ProtectedRoute / useAuth）
+测试覆盖：233 tests / 20 files（format / DemandCard / PageTransition / Layout / client / AuthProvider / DemandDetailPage / OrderDetailPage / OrderListPage / NotificationsPage / UserPublicPage / ProfilePage / CreateDemandPage / LoginPage / RegisterPage / ProtectedRoute / useAuth）
 
 ## Development Commands
 
@@ -174,13 +174,13 @@ setSnackbar({ open: true, message: '操作成功', severity: 'success' });
 
 ## Testing
 
-- 200 tests across 17 files (Vitest + jsdom + @testing-library/react)
+- 233 tests across 20 files (Vitest + jsdom + @testing-library/react)
 - 覆盖率配置：`@vitest/coverage-v8`，通过 `pnpm test:coverage` 查看 text 报告
 - Mock pattern: full `AuthContextType` interface, never `as any`
 - 纯函数（utils）与组件测试分离：纯函数不 mock，组件 mock 非确定性依赖（Date.now、router）
 - Setup file: `src/utils/__tests__/setup.ts` imports `@testing-library/jest-dom/vitest`
 
-### Coverage (当前 ~47.7% statements)
+### Coverage (当前 ~66.4% statements)
 
 | 文件 | Statements | 说明 |
 |------|-----------|------|
@@ -190,13 +190,16 @@ setSnackbar({ open: true, message: '操作成功', severity: 'success' });
 | `useAuth.ts` | 100% | 正常 + 越界抛错 |
 | `ProtectedRoute.tsx` | 100% | 路由守卫 |
 | `UserPublicPage.tsx` | ~92% | 公开资料/评价列表 |
+| `HomePage.tsx` | ~90% | 排序/筛选/分页/搜索防抖 |
 | `OrderListPage.tsx` | ~91% | Tab切换/状态筛选/开放需求混排 |
 | `Layout.tsx` | ~91% | AppBar/菜单/通知铃铛/登出/管理员 |
 | `NotificationsPage.tsx` | ~89% | 通知列表/标记已读/筛选/导航 |
-| `ProfilePage.tsx` | ~82% | 查看/编辑双模式/头像上传/保存 |
 | `CreateDemandPage.tsx` | ~79% | 表单验证/图片上传/发布 |
+| `AdminPage.tsx` | ~76% | 5个管理标签页/用户/需求/纠纷/申请 |
+| `ProfilePage.tsx` | ~82% | 查看/编辑双模式/头像上传/保存 |
 | `client.ts` | ~92% | 401 刷新队列全路径 |
 | `AuthProvider.tsx` | ~83% | 认证状态机 |
+| `ChatPage.tsx` | ~66% | 消息轮询/发送/Enter发送/加载更多 |
 | `OrderDetailPage.tsx` | ~70% | 订单状态流转/操作按钮/评价 |
 | `DemandDetailPage.tsx` | ~71% | 图片预览/接单/删除/发布者卡片 |
 | `LoginPage.tsx` | ~95% | 登录表单 + loading + 错误态 |

@@ -29,6 +29,7 @@
 18. [测试持续推进 + CI 优化](#18-测试持续推进--ci-优化)
 19. [测试持续推进(二) + CI 修复](#19-测试持续推进二--ci-修复)
 20. [测试持续推进(三)](#20-测试持续推进三)
+21. [测试全覆盖 + 收尾](#21-测试全覆盖--收尾)
 
 ---
 
@@ -1287,4 +1288,47 @@ frontend/src/pages/__tests__/UserPublicPage.test.tsx    新增：公开资料
 frontend/src/pages/__tests__/ProfilePage.test.tsx       新增：个人资料编辑
 frontend/src/pages/__tests__/CreateDemandPage.test.tsx  新增：发布需求
 frontend/CLAUDE.md + DEVLOG.md                          同步
+```
+
+---
+
+## 21. 测试全覆盖 + 收尾
+
+> 日期：2026-06-04
+> 内容：HomePage + ChatPage + AdminPage 单元测试，完成全部 12 页面覆盖
+
+### 21.1 新增测试
+
+| 文件 | 用例数 | 覆盖要点 |
+|------|--------|---------|
+| `HomePage.test.tsx` | 14 | 搜索防抖、分类多选、排序升降、状态筛选、报酬预设/自定义、分页 |
+| `ChatPage.test.tsx` | 11 | 消息渲染/发送/Enter/失败恢复/加载更多 |
+| `AdminPage.test.tsx` | 8 | 权限拦截/统计/用户/需求/纠纷/申请 |
+
+### 21.2 关键技术与坑
+
+**`scrollIntoView` 在 jsdom 不存在**：`Element.prototype.scrollIntoView = vi.fn()`。
+
+**MUI 图标 data-testid**：`ChatOutlined as SendIcon` 仍使用原始名 `ChatOutlinedIcon`。
+
+**AdminPage 多 Tab**：5 个内部组件各自 useEffect 调用 API，需 mock 5 组数据。
+
+### 21.3 覆盖率里程碑
+
+| 阶段 | Tests | Statements |
+|------|-------|-----------|
+| 初始 | 27 | 9.25% |
+| 第一轮 | 84 | 13.6% |
+| 第二轮 | 128 | 23.4% |
+| 第三轮 | 171 | 37.6% |
+| 第四轮 | 200 | 47.7% |
+| **全覆盖** | **233** | **66.4%** |
+
+### 21.4 涉及文件
+
+```
+frontend/src/pages/__tests__/HomePage.test.tsx   新增
+frontend/src/pages/__tests__/ChatPage.test.tsx   新增
+frontend/src/pages/__tests__/AdminPage.test.tsx  新增
+frontend/CLAUDE.md + DEVLOG.md                   同步
 ```
