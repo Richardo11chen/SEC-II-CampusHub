@@ -17,6 +17,8 @@ frontend-lint:
   stage: lint
   image: node:lts
   needs: [frontend-install]
+  before_script:
+    - npm install -g pnpm
   script:
     - cd frontend && pnpm lint && pnpm check
 
@@ -24,6 +26,8 @@ frontend-build:
   stage: build
   image: node:lts
   needs: [frontend-install]
+  before_script:
+    - npm install -g pnpm
   script:
     - cd frontend && pnpm build
   artifacts:
@@ -34,5 +38,7 @@ frontend-test:
   stage: test
   image: node:lts
   needs: [frontend-install]
+  before_script:
+    - npm install -g pnpm
   script:
     - cd frontend && pnpm test
