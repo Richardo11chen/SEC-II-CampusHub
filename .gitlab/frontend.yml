@@ -1,26 +1,31 @@
 stages:
+  - install
   - lint
   - build
   - test
 
+frontend-install:
+  stage: install
+  image: node:lts
+  script:
+    - cd frontend && npm install -g pnpm && pnpm ci
+  artifacts:
+    paths:
+      - frontend/node_modules/
+
 frontend-lint:
   stage: lint
   image: node:lts
+  needs: [frontend-install]
   script:
-    - cd frontend
-    - npm install -g pnpm
-    - pnpm ci
-    - pnpm lint
-    - pnpm check
+    - cd frontend && pnpm lint && pnpm check
 
 frontend-build:
   stage: build
   image: node:lts
+  needs: [frontend-install]
   script:
-    - cd frontend
-    - npm install -g pnpm
-    - pnpm ci
-    - pnpm build
+    - cd frontend && pnpm build
   artifacts:
     paths:
       - frontend/dist/
@@ -28,8 +33,6 @@ frontend-build:
 frontend-test:
   stage: test
   image: node:lts
+  needs: [frontend-install]
   script:
-    - cd frontend
-    - npm install -g pnpm
-    - pnpm ci
-    - pnpm test
+    - cd frontend && pnpm test

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { AuthContext, type AuthContextType } from '@/store/authContext';
 import LoginPage from '../LoginPage';
 
 const mockLogin = vi.fn();
+let resolveLogin: ((value: unknown) => void) | null = null;
 
 const mockAuth: AuthContextType = {
   user: null,
@@ -29,6 +30,12 @@ function renderPage() {
 }
 
 describe('LoginPage', () => {
+  beforeEach(() => {
+    mockLogin.mockReset();
+    // 默认 resolve 以通过 loading 态
+    mockLogin.mockResolvedValue(undefined);
+  });
+
   it('renders login form with heading and button', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: '登录' })).toBeInTheDocument();
@@ -55,5 +62,38 @@ describe('LoginPage', () => {
     await userEvent.type(screen.getByLabelText('密码'), 'pass1234');
     await userEvent.click(screen.getByRole('button', { name: '登录' }));
     expect(mockLogin).toHaveBeenCalledWith({ studentId: '2024123456', password: 'pass1234' });
+  });
+
+  it('shows loading state while logging in', async () => {
+    mockLogin.mockImplementation(() => new Promise((resolve) => { resolveLogin = resolve; }));
+    renderPage();
+    await userEvent.type(screen.getByLabelText('学号'), '2024123456');
+    await userEvent.type(screen.getByLabelText('密码'), 'pass1234');
+
+    const btn = screen.getByRole('button', { name: '登录' });
+    await userEvent.click(btn);
+
+    expect(await screen.findByText('登录中…')).toBeInTheDocument();
+    expect(btn).toBeDisabled();
+
+    resolveLogin!(undefined);
+  });
+
+  it('shows error message on login failure', async () => {
+    mockLogin.mockRejectedValue(new Error('学号或密码错误'));
+    renderPage();
+    await userEvent.type(screen.getByLabelText('学号'), '2024123456');
+    await userEvent.type(screen.getByLabelText('密码'), 'wrongpass');
+    await userEvent.click(screen.getByRole('button', { name: '登录' }));
+    expect(await screen.findByText('学号或密码错误')).toBeInTheDocument();
+  });
+
+  it('shows generic fallback error for non-Error rejection', async () => {
+    mockLogin.mockRejectedValue('raw string');
+    renderPage();
+    await userEvent.type(screen.getByLabelText('学号'), '2024123456');
+    await userEvent.type(screen.getByLabelText('密码'), 'wrongpass');
+    await userEvent.click(screen.getByRole('button', { name: '登录' }));
+    expect(await screen.findByText('登录失败')).toBeInTheDocument();
   });
 });

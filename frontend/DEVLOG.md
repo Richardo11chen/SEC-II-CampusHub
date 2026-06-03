@@ -26,6 +26,7 @@
 15. [UI/UX 细节修复与需求订单状态](#15-uiux-细节修复与需求订单状态)
 16. [首页排序筛选重构与优化](#16-首页排序筛选重构与优化)
 17. [单元测试扩展](#17-单元测试扩展)
+18. [测试持续推进 + CI 优化](#18-测试持续推进--ci-优化)
 
 ---
 
@@ -1102,4 +1103,68 @@ vi.mock('axios', () => ({ default: { create: vi.fn(() => mockAxiosInstance) } })
 
 以上都需要更大的 mocking 投入，留待后续按需补充。
 
+---
+
+## 18. 测试持续推进 + CI 优化
+
+> 日期：2026-06-03
+> 内容：Layout(菜单/通知/登出) + LoginPage(loading/错误态) + RegisterPage(选填字段+分支100%) + AuthProvider(认证状态机) + DemandDetailPage(图片/接单/删除) + 前端CI流水线优化
+
+### 18.1 测试进展
+
+本轮把测试覆盖从"基础设施"延伸到"认证核心组件"和"页面级组件"：
+
+| 文件 | 新增用例 | 覆盖要点 |
+|------|---------|---------|
+| `Layout.test.tsx` | 12→16 | 用户菜单弹出/关闭、通知铃铛导航、Badge红点、登出流程、管理员权限 |
+| `LoginPage.test.tsx` | 4→7 | loading态按钮禁用、"登录中…"文案、登录失败错误回显、非Error类型fallback |
+| `RegisterPage.test.tsx` | 8→10 | 选填字段(真实姓名/邮箱)、catch块(注册失败)、`beforeEach` reset |
+| `AuthProvider.test.tsx` | 新增11 | 初始无token态、session恢复(三种路径)、login/logout、auth:logout事件、register、updateUser |
+| `DemandDetailPage.test.tsx` | 新增13 | loading/error态、基本信息渲染、图片画廊+预览弹窗、发布者卡片(匿名/非匿名)、当前订单卡片+参与者权限、接单(已登录/未登录)、删除(确认弹窗+跳转) |
+
+### 18.2 关键技术与坑
+
+**React 19 + 异步错误处理**：登录失败时 `login()` throw，但 React 19 的事件处理器不捕获异步 reject，导致 vitest 报 unhandled rejection。解决方案是用 `process.on('unhandledRejection', handler)` 临时屏蔽（`AuthProvider.test.tsx`）。
+
+**`vi.mock` 的模块隔离**：AuthProvider 和 DemandDetailPage 分别 mock 了 `@/api/auth` 和 `@/api/demands`。要注意 mock 只在本文件生效，不影响其他测试。
+
+**`getMe` 从不 throw**：`users.ts` 的 `getMe` 内部 try-catch 后返回 `{ data: null, error: msg }` 而非 throw。Mock 时用 `mockResolvedValue({ data: null, error: '...' })` 而不是 `mockRejectedValue`。
+
+### 18.3 CI 流水线优化
+
+对比后端 pipeline 后发现前端可改进：
+
+**问题**：三个 job（lint/build/test）各自 `npm install -g pnpm && pnpm ci`，重复安装依赖，每次多花 ~60-90s。
+
+**优化**：新增 `install` stage，输出 `node_modules/` 作为 artifacts，后续 jobs 通过 `needs: [frontend-install]` 依赖并行执行。
+
+### 18.4 测试全景（截至 2026-06-03）
+
+```
+128 tests | 11 files
+  format.test.ts             27  格式/脱敏/相对时间/状态→颜色
+  DemandCard.test.tsx        16  渲染态/标签逻辑/导航
+  Layout.test.tsx            16  AppBar/菜单/通知铃铛/登出/管理员
+  client.test.ts             14  axios 401 刷新队列
+  DemandDetailPage.test.tsx  13  图片/接单/删除/订单卡片
+  AuthProvider.test.tsx      11  认证状态机：session/token/login/logout
+  RegisterPage.test.tsx      10  表单校验 100% 分支
+  LoginPage.test.tsx          7  登录表单/loading/错误态
+  PageTransition.test.tsx     5  动画容器渲染
+  ProtectedRoute.test.tsx     3  路由守卫
+  useAuth.test.tsx            2  Hook 正常/越界
+```
+
+整体 statements 覆盖率 **9.25% → 23.42%**。
+
+### 18.5 涉及文件
+
+```
+.gitlab/frontend.yml                                   CI 流水线优化：独立 install stage
+frontend/src/components/__tests__/Layout.test.tsx       扩展：菜单/通知/登出/管理员
+frontend/src/pages/__tests__/LoginPage.test.tsx         扩展：loading/错误态
+frontend/src/pages/__tests__/RegisterPage.test.tsx      扩展：选填字段/catch块
+frontend/src/pages/__tests__/DemandDetailPage.test.tsx  新增：全组件测试
+frontend/src/store/__tests__/AuthProvider.test.tsx      新增：认证状态机
+frontend/CLAUDE.md + DEVLOG.md                          同步
 ```
