@@ -118,22 +118,19 @@ export const demandRepository = {
       ];
     }
 
-    // 紧急需求优先排在前面
-    orderBy.push({ isUrgent: 'desc' });
-
     switch (sortBy) {
       case 'oldest':
-        orderBy.push({ createdAt: 'asc' });
+        orderBy.push({ createdAt: 'asc' }, { isUrgent: 'desc' });
         break;
       case 'reward_high':
-        orderBy.push({ reward: 'desc' });
+        orderBy.push({ reward: 'desc' }, { isUrgent: 'desc' });
         break;
       case 'reward_low':
-        orderBy.push({ reward: 'asc' });
+        orderBy.push({ reward: 'asc' }, { isUrgent: 'desc' });
         break;
       case 'newest':
       default:
-        orderBy.push({ createdAt: 'desc' });
+        orderBy.push({ createdAt: 'desc' }, { isUrgent: 'desc' });
         break;
     }
 
