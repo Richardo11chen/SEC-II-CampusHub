@@ -39,7 +39,10 @@ export const demandService = {
       await demandImageRepository.createMany(imageData);
     }
 
-    return demandRepository.findById(demand.id);
+    const result = await demandRepository.findById(demand.id);
+    if (!result) return null;
+    const { order, ...rest } = result;
+    return { ...rest, currentOrder: order ?? null };
   },
 
   async getDemandList(filter: DemandFilter) {
@@ -125,7 +128,10 @@ export const demandService = {
       }
     }
 
-    return demandRepository.findById(id);
+    const updated = await demandRepository.findById(id);
+    if (!updated) return null;
+    const { order, ...rest } = updated;
+    return { ...rest, currentOrder: order ?? null };
   },
 
   async deleteDemand(id: number, userId: number) {

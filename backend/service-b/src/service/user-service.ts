@@ -26,6 +26,7 @@ export const userService = {
         avatar: true,
         creditScore: true,
         role: true,
+        status: true,
         showRealName: true,
         createdAt: true,
       },
@@ -48,6 +49,7 @@ export const userService = {
       avatar: user.avatar,
       creditScore: user.creditScore,
       role: user.role,
+      status: user.status,
       showRealName: user.showRealName,
       createdAt: user.createdAt,
     };

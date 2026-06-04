@@ -1,5 +1,5 @@
 import { OrderStatus, DemandStatus } from '@prisma/client';
-import { orderRepository, demandRepository, userRepository, disputeRepository, noShowRecordRepository, prisma, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@campushub/shared';
+import { orderRepository, demandRepository, userRepository, disputeRepository, noShowRecordRepository, prisma, notifyOrderTaken, notifyOrderCompleted, notifyOrderConfirmed, notifyOrderCancelled, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@campushub/shared';
 import type { OrderFilter } from '@campushub/shared';
 
 export const orderService = {
@@ -133,6 +133,9 @@ export const orderService = {
       });
     });
 
+    // 通知发布者有人接单
+    await notifyOrderTaken(order.id, order.publisherId, user!.nickname);
+
     return order;
   },
 
@@ -173,6 +176,12 @@ export const orderService = {
 
     if (count === 0) {
       throw new ConflictError('订单已被修改，请刷新后重试');
+    }
+
+    // 通知发布者：服务方已提交完成
+    const provider = await userRepository.findById(userId);
+    if (provider) {
+      await notifyOrderCompleted(orderId, order.publisherId, provider.nickname);
     }
 
     return orderRepository.findById(orderId);
@@ -269,6 +278,13 @@ export const orderService = {
         },
       });
     });
+
+    // 通知对方订单已取消
+    const canceller = await userRepository.findById(userId);
+    const notifyTargetId = isProviderCancel ? order.publisherId : order.providerId;
+    if (canceller) {
+      await notifyOrderCancelled(orderId, notifyTargetId, canceller.nickname, cancelReason);
+    }
 
     return result;
   },
@@ -392,6 +408,12 @@ export const orderService = {
         },
       });
     });
+
+    // 通知服务方：发布者已确认完成
+    const publisher = await userRepository.findById(userId);
+    if (publisher) {
+      await notifyOrderConfirmed(orderId, order.providerId, publisher.nickname);
+    }
 
     return result;
   },

@@ -2,12 +2,16 @@ import prisma from '../utils/prisma.js';
 
 export const reviewRepository = {
   async create(data: { orderId: number; fromUserId: number; toUserId: number; rating: number; content?: string }) {
-    return prisma.review.create({ data });
+    return prisma.review.create({
+      data,
+      include: { fromUser: { select: { id: true, nickname: true, avatar: true } } },
+    });
   },
 
   async findByOrderAndUser(orderId: number, fromUserId: number) {
     return prisma.review.findUnique({
       where: { uk_order_from_user: { orderId, fromUserId } },
+      include: { fromUser: { select: { id: true, nickname: true, avatar: true } } },
     });
   },
 
