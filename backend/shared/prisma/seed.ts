@@ -5,20 +5,48 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
-  // Create a test user
-  const user = await prisma.user.upsert({
+  // Password: test1234 (bcrypt hash generated with 12 rounds)
+  const PASSWORD_HASH = '$2b$12$AKi461ut5zqXswoer5DdC.pmea3Srd94LXO9PtfNli1NcJHFWCPF.';
+
+  // 用户 A — 发布者
+  const userA = await prisma.user.upsert({
     where: { studentId: '2024000001' },
     update: {},
     create: {
       studentId: '2024000001',
-      passwordHash: '$2b$12$placeholder', // Replace with actual bcrypt hash
-      nickname: '测试用户',
+      passwordHash: PASSWORD_HASH,
+      nickname: '张三',
+      name: '张三',
+      college: '计算机科学与技术系',
+      phoneEncrypted: Buffer.from('encrypted_dummy_data'),
+      email: 'zhangsan@example.com',
       creditScore: 70,
       role: 'student',
+      showRealName: false,
+      status: '正常',
     },
   });
 
-  console.log('Seed data created:', user.id);
+  // 用户 B — 服务方/接单者
+  const userB = await prisma.user.upsert({
+    where: { studentId: '2024000002' },
+    update: {},
+    create: {
+      studentId: '2024000002',
+      passwordHash: PASSWORD_HASH,
+      nickname: '李四',
+      name: '李四',
+      college: '软件学院',
+      phoneEncrypted: Buffer.from('encrypted_dummy_data'),
+      email: 'lisi@example.com',
+      creditScore: 70,
+      role: 'student',
+      showRealName: true,
+      status: '正常',
+    },
+  });
+
+  console.log('Seed data created:', userA.id, userB.id);
 }
 
 main()
