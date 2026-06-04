@@ -67,6 +67,10 @@ vi.mock('@campushub/shared', () => ({
     statusCode = 400;
     constructor(message = '请求参数错误') { super(message); }
   },
+  notifyOrderTaken: vi.fn(),
+  notifyOrderCompleted: vi.fn(),
+  notifyOrderCancelled: vi.fn(),
+  notifyOrderConfirmed: vi.fn(),
 }));
 
 import { orderService } from '../service/order-service.js';
