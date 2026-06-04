@@ -125,6 +125,7 @@ export interface Demand {
   };
   currentOrder?: {
     id: number;
+    status: OrderStatus;
     provider: {
       id: number;
       nickname: string;

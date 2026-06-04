@@ -88,7 +88,7 @@ export default function OrderDetailPage() {
   const showConfirm = isPublisher && status === '待确认';
   const showCancel = status === '进行中';
   const showDispute = status === '进行中' || status === '待确认';
-  const showChat = (status === '进行中' || status === '待确认') && (isPublisher || isProvider);
+  const showChat = (status === '进行中' || status === '待确认' || status === '纠纷中') && (isPublisher || isProvider);
   const handleComplete = async () => {
     if (!order) return;
     setActionLoading(true);

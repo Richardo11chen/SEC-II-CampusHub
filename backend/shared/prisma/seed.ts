@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { encryptPhone } from '../src/utils/crypto.js';
 
 const prisma = new PrismaClient();
 
@@ -18,7 +19,7 @@ async function main() {
       nickname: '张三',
       name: '张三',
       college: '计算机科学与技术系',
-      phoneEncrypted: Buffer.from('encrypted_dummy_data'),
+      phoneEncrypted: encryptPhone('13812340001'),
       email: 'zhangsan@example.com',
       creditScore: 70,
       role: 'student',
@@ -37,7 +38,7 @@ async function main() {
       nickname: '李四',
       name: '李四',
       college: '软件学院',
-      phoneEncrypted: Buffer.from('encrypted_dummy_data'),
+      phoneEncrypted: encryptPhone('13812340002'),
       email: 'lisi@example.com',
       creditScore: 70,
       role: 'student',

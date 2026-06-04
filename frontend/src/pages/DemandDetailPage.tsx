@@ -202,7 +202,7 @@ export default function DemandDetailPage() {
       </Card>
 
       {/* 当前订单状态 */}
-      {demand.currentOrder && (
+      {demand.currentOrder && demand.currentOrder.status !== '已取消' && (
         <Card sx={{ mt: 2, bgcolor: 'primary.main', color: '#fff' }}>
           <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box>

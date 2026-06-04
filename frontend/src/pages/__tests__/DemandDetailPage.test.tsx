@@ -158,7 +158,7 @@ describe('DemandDetailPage', () => {
 
   it('shows current order card when demand has an active order', async () => {
     (demandsApi.getDemand as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: makeDemand({ currentOrder: { id: 99, provider: { id: 300, nickname: '接单者', avatar: undefined, creditScore: 70 } } }),
+      data: makeDemand({ currentOrder: { id: 99, status: '进行中', provider: { id: 300, nickname: '接单者', avatar: undefined, creditScore: 70 } } }),
       error: null,
     });
     renderPage();
@@ -168,7 +168,7 @@ describe('DemandDetailPage', () => {
 
   it('shows "查看订单" button for order participants', async () => {
     (demandsApi.getDemand as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: makeDemand({ currentOrder: { id: 99, provider: { id: 300, nickname: '接单者', avatar: undefined, creditScore: 70 } } }),
+      data: makeDemand({ currentOrder: { id: 99, status: '进行中', provider: { id: 300, nickname: '接单者', avatar: undefined, creditScore: 70 } } }),
       error: null,
     });
     renderPage(); // mockUser.id=200, 不是发布者也不是承接者，所以不应看到按钮
@@ -178,7 +178,7 @@ describe('DemandDetailPage', () => {
 
   it('hides "查看订单" when user is not order participant', async () => {
     (demandsApi.getDemand as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: makeDemand({ currentOrder: { id: 99, provider: { id: 300, nickname: '接单者', avatar: undefined, creditScore: 70 } }, publisher: { id: 200, nickname: '自己', avatar: undefined, creditScore: 70 } }),
+      data: makeDemand({ currentOrder: { id: 99, status: '进行中', provider: { id: 300, nickname: '接单者', avatar: undefined, creditScore: 70 } }, publisher: { id: 200, nickname: '自己', avatar: undefined, creditScore: 70 } }),
       error: null,
     });
     renderPage({ user: { ...mockUserAlt, id: 200 } });
