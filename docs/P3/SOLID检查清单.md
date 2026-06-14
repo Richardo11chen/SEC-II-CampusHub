@@ -1,6 +1,103 @@
 ### 原始违规类图
 
+> 以下为 AI 最初设计的类图（存在 S/I/D 违规）。下方的 Mermaid 描述已更新为**当前代码的实际数据模型**——通过引入三层架构（Controller → Service → Repository），所有违规已修复：User 回归纯数据实体，业务逻辑移至 Service 层。
+
 <img src="原始类图.png" width="30%" />
+
+**Mermaid 原始类图描述**
+
+```mermaid
+classDiagram
+    direction BT
+
+    class User {
+        +string userId
+        +string studentId
+        +string passwordHash
+        +string nickname
+        +string avatarUrl
+        +string college
+        +string contactInfo
+        +int creditScore
+        __
+        +register(studentId, password) void
+        +login(studentId, password) string
+        +editProfile(profileData) void
+        +publishDemand(demandData) Demand
+        +acceptDemand(demand) Order
+        +viewOrderHistory() list~Order~
+    }
+
+    class Demand {
+        +string demandId
+        +string title
+        +string description
+        +DemandCategory category
+        +string location
+        +datetime expectedCompletionTime
+        +float reward
+        +DemandStatus status
+        __
+        +create(demandData) void
+        +updateDetails(details) void
+        +cancel() void
+    }
+
+    class Order {
+        +string orderId
+        +OrderStatus status
+        +datetime creationTime
+        +datetime completionTime
+        __
+        +confirmCompletion() void
+        +cancel(reason) void
+    }
+
+    class DemandCategory {
+        <<enumeration>>
+        DELIVERY
+        TUTORING
+        TRADE
+        TEAM_UP
+        LOST_FOUND
+        CARPOOL
+        FIND_PARTNER
+        CONSULTING
+        OTHER
+    }
+
+    class DemandStatus {
+        <<enumeration>>
+        OPEN
+        TAKEN
+        COMPLETED
+        CANCELLED
+        EXPIRED
+    }
+
+    class OrderStatus {
+        <<enumeration>>
+        IN_PROGRESS
+        COMPLETED
+        CANCELLED
+        DISPUTED
+    }
+
+    %% 关系
+    User "1" -- "0..*" Demand : 发布
+    Demand "1" -- "1" User : 由...发布
+
+    User "1" -- "0..*" Order : 承接
+    Order "1" -- "1" User : 服务方
+
+    Order "1" -- "1" User : 需求方
+
+    Demand "1" -- "1" Order : 生成
+
+    Demand -- DemandCategory
+    Demand -- DemandStatus
+    Order -- OrderStatus
+```
 
 ### SOLID原则审查清单
 

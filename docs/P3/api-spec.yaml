@@ -20,10 +20,10 @@ info:
     name: CampusHub Team
 
 servers:
-  - url: http://localhost:3000/api
-    description: 本地开发环境
-  - url: https://api.campushub.example.com/api
-    description: 生产环境（HTTPS 必须）
+  - url: http://localhost:3001/api
+    description: Service-A（需求与订单服务，端口 3001）
+  - url: http://localhost:3002/api
+    description: Service-B（认证/用户/评价/通知/消息/管理/上传，端口 3002）
 
 paths:
   # ============================================================
@@ -117,7 +117,7 @@ paths:
       tags:
         - 认证 (Auth)
       summary: 用户登录
-      description: "对应需求 F01：用户通过学号+密码登录，返回 JWT token。登录失败 5 次后触发临时锁定"
+      description: "对应需求 F01：用户通过学号+密码登录，返回 JWT token"
       security: []
       x-rate-limit:
         maxRequests: 20
@@ -195,7 +195,7 @@ paths:
       tags:
         - 认证 (Auth)
       summary: 用户登出
-      description: "将当前 JWT token 和 refresh token 加入黑名单（需要 Redis 支持）"
+      description: "将当前 JWT token 和 refresh token 撤销（通过 MySQL 标记 refresh token 为已撤销）"
       security:
         - BearerAuth: []
       requestBody:
@@ -384,7 +384,7 @@ paths:
       tags:
         - 用户 (User)
       summary: 获取指定用户公开信息
-      description: "获取其他用户的公开资料（信用分、评价等），敏感信息脱敏。需要登录态以防止爬虫"
+      description: "获取其他用户的公开资料（信用分、评价统计等），敏感信息脱敏。需要登录态以防止爬虫"
       security:
         - BearerAuth: []
       parameters:
@@ -1228,7 +1228,11 @@ paths:
                   data:
                     $ref: "#/components/schemas/Review"
         "400":
-          $ref: "#/components/responses/BadRequest"
+          description: "请求参数错误 或 订单未完成，不可评价"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "409":
@@ -1237,12 +1241,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
-        "422":
-          description: "订单未完成，不可评价"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /reviews/my:
+    get:
+      tags:
+        - 评价 (Review)
+      summary: 获取当前用户对某订单的评价
+      description: "查看自己是否已评价过某订单（返回评价对象或 null）"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 订单 ID
+          example: 1
+      responses:
+        "200":
+          description: 成功获取评价信息（可能为 null）
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    nullable: true
+                    $ref: "#/components/schemas/Review"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1523,14 +1556,14 @@ paths:
           $ref: "#/components/responses/InternalError"
 
   # ============================================================
-  # Recommendations - 智能推荐 (P2)
+  # Recommendations - 智能推荐 (P2) [未实现]
   # ============================================================
   /recommendations/demands:
     get:
       tags:
         - 推荐 (Recommendation)
-      summary: 获取推荐需求列表
-      description: "对应需求 F26、F27：基于用户历史行为推荐相关需求，按匹配度排序（P2）"
+      summary: 获取推荐需求列表 [未实现]
+      description: "对应需求 F26、F27：基于用户历史行为推荐相关需求，按匹配度排序（P2）。注意：此接口尚未实现"
       security:
         - BearerAuth: []
       parameters:
@@ -1573,7 +1606,7 @@ paths:
           $ref: "#/components/responses/InternalError"
 
   # ============================================================
-  # Admin - 管理后台 (P2)
+  # Admin - 管理后台 (P2) (未实现: /recommendations/demands)
   # ============================================================
   /admin/users:
     get:
@@ -1829,6 +1862,10 @@ paths:
                   data:
                     type: object
                     properties:
+                      totalUsers:
+                        type: integer
+                        description: 总用户数
+                        example: 256
                       dailyActiveUsers:
                         type: integer
                         description: 日活跃用户数
@@ -2251,6 +2288,19 @@ components:
             - admin
           description: "用户角色"
           example: "student"
+        status:
+          type: string
+          enum:
+            - 正常
+            - 已禁用
+          description: "账号状态"
+          example: "正常"
+        restrictedUntil:
+          type: string
+          format: date-time
+          nullable: true
+          description: "限制发布/接单截止时间（信用分过低或爽约频繁时触发）"
+          example: null
         showRealName:
           type: boolean
           description: "是否对外展示真实姓名（对应 F04）"
@@ -2287,6 +2337,15 @@ components:
           type: integer
           description: 完成的订单数
           example: 23
+        averageRating:
+          type: number
+          nullable: true
+          description: 平均评分
+          example: 4.5
+        totalReviews:
+          type: integer
+          description: 评价总数
+          example: 10
         joinedAt:
           type: string
           format: date-time
@@ -2348,6 +2407,7 @@ components:
         expectedTime:
           type: string
           format: date-time
+          nullable: true
           example: "2026-05-15T18:00:00Z"
         reward:
           type: number
@@ -2370,6 +2430,10 @@ components:
           type: boolean
           description: "是否匿名发布（对应 F03）"
           example: false
+        version:
+          type: integer
+          description: 乐观锁版本号
+          example: 1
         images:
           type: array
           items:
@@ -2414,6 +2478,14 @@ components:
           type: boolean
         isAnonymous:
           type: boolean
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
         publisher:
           type: object
           properties:
@@ -2426,9 +2498,6 @@ components:
               format: uri
             creditScore:
               type: integer
-        createdAt:
-          type: string
-          format: date-time
 
     # -------- 订单相关 --------
     Order:
@@ -2441,9 +2510,6 @@ components:
         demandId:
           type: integer
           example: 1
-        demandTitle:
-          type: string
-          example: "帮取快递——仙林校区"
         publisherId:
           type: integer
           description: 需求方（发布者）ID
@@ -2471,10 +2537,33 @@ components:
           type: boolean
           description: "是否已付款/托管（对应 F15）"
           example: false
+        message:
+          type: string
+          nullable: true
+          description: 接单留言
+          example: "我在四栋，可以帮你取！"
+        cancelledBy:
+          type: string
+          nullable: true
+          description: "取消方（publisher/provider）"
+          example: null
+        cancelReason:
+          type: string
+          nullable: true
+          description: 取消原因
+          example: null
+        version:
+          type: integer
+          description: 乐观锁版本号
+          example: 1
         createdAt:
           type: string
           format: date-time
         completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        cancelledAt:
           type: string
           format: date-time
           nullable: true
@@ -2505,6 +2594,10 @@ components:
           example: 1
         fromUser:
           $ref: "#/components/schemas/PublicUserProfile"
+        fromUserId:
+          type: integer
+          description: 评价者 ID
+          example: 1
         toUserId:
           type: integer
           description: 被评价用户 ID
@@ -2784,7 +2877,5 @@ components:
       description: "资源不存在——请求的资源（用户/需求/订单等）不存在"
     - code: 409
       description: "资源冲突——数据不满足约束条件（如学号已注册、抢单冲突、重复评价、订单状态不允许操作等）"
-    - code: 422
-      description: "不可处理的实体——业务规则校验失败（如信用分不足、爽约频率过高等）"
     - code: 500
       description: "服务器内部错误——未预期的异常，请联系管理员"
