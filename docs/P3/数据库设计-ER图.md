@@ -23,11 +23,14 @@ erDiagram
     User ||--o{ AdminApplication : "申请者 applicant"
     User ||--o{ AdminApplication : "审批者 reviewer"
     User ||--o{ RefreshToken : "持有者"
-    Demand ||--o{ Order : "产生"
+    User ||--o{ NoShowRecord : "爽约记录"
+    User ||--o{ FieldModificationLog : "修改日志"
+    Demand ||--o| Order : "产生（至多一个订单）"
+    Demand ||--o{ DemandImage : "关联图片"
     Order ||--o{ Message : "包含"
     Order ||--o{ Review : "被评价"
     Order ||--o| Dispute : "发起纠纷"
-    Order ||--o{ DemandImage : "关联图片"
+    Order ||--o| NoShowRecord : "爽约关联"
 ```
 
 ---
@@ -46,13 +49,14 @@ erDiagram
 | `nickname` | VARCHAR(20) | NOT NULL | 昵称（1-20 字） |
 | `name` | VARCHAR(20) | | 真实姓名（选填） |
 | `college` | VARCHAR(50) | | 学院 |
-| `phone` | VARCHAR(11) | | 手机号 |
+| `phone_encrypted` | VARBINARY(255) | | 手机号（AES-256-CBC 加密存储） |
 | `email` | VARCHAR(100) | | 邮箱 |
 | `avatar` | VARCHAR(500) | | 头像 URL |
 | `credit_score` | INT | DEFAULT 70, CHECK(0-100) | 信用分 |
 | `role` | ENUM('student','admin') | DEFAULT 'student' | 用户角色 |
 | `show_real_name` | BOOLEAN | DEFAULT FALSE | 是否对外展示真实姓名 |
 | `status` | ENUM('正常','已禁用') | DEFAULT '正常' | 账号状态 |
+| `restricted_until` | DATETIME | | 限制发布截止时间 |
 | `created_at` | DATETIME | NOT NULL | 注册时间 |
 | `updated_at` | DATETIME | NOT NULL | 更新时间 |
 | `last_login_at` | DATETIME | | 最后登录时间 |
@@ -78,7 +82,6 @@ erDiagram
 | `status` | ENUM('开放','进行中','已完成','已关闭') | DEFAULT '开放', NOT NULL | 需求状态 |
 | `is_urgent` | BOOLEAN | DEFAULT FALSE | 是否紧急（置顶展示） |
 | `is_anonymous` | BOOLEAN | DEFAULT FALSE | 是否匿名发布 |
-| `images` | JSON | | 图片 URL 数组 |
 | `version` | INT | DEFAULT 1 | 乐观锁版本号 |
 | `created_at` | DATETIME | NOT NULL | 发布时间 |
 | `updated_at` | DATETIME | NOT NULL | 更新时间 |
@@ -101,6 +104,8 @@ erDiagram
 | `reward` | DECIMAL(6,2) | NOT NULL | 报酬金额（从需求继承） |
 | `is_paid` | BOOLEAN | DEFAULT FALSE | 是否已付款/托管 |
 | `version` | INT | DEFAULT 1 | 乐观锁版本号 |
+| `message` | VARCHAR(500) | | 接单留言 |
+| `cancelled_by` | VARCHAR(10) | | 取消方（publisher / provider） |
 | `created_at` | DATETIME | NOT NULL | 创建时间 |
 | `completed_at` | DATETIME | | 完成时间 |
 | `cancelled_at` | DATETIME | | 取消时间 |
@@ -137,7 +142,7 @@ erDiagram
 | --- | --- | --- | --- |
 | `id` | INT | **PK**, AUTO_INCREMENT | 通知 ID |
 | `user_id` | INT | **FK → User.id**, NOT NULL | 接收用户 ID |
-| `type` | ENUM('order_taken','order_completed','order_confirmed','order_cancelled','review_received','dispute_update') | NOT NULL | 通知类型 |
+| `type` | VARCHAR(50) | NOT NULL | 通知类型（order_taken / order_completed / order_confirmed / order_cancelled / review_received / dispute_update） |
 | `title` | VARCHAR(200) | NOT NULL | 通知标题 |
 | `content` | TEXT | NOT NULL | 通知内容 |
 | `related_id` | INT | | 关联业务 ID（订单 ID / 需求 ID） |
@@ -223,7 +228,7 @@ erDiagram
 
 ### 2.10 DemandImage（需求图片）
 
-需求关联的多张图片（若使用关系表而非 JSON 存储）。
+需求关联的多张图片，通过独立的关系表存储（非 JSON 字段）。
 
 | 字段 | 类型 | 约束 | 说明 |
 | --- | --- | --- | --- |
@@ -234,6 +239,38 @@ erDiagram
 | `created_at` | DATETIME | NOT NULL | 上传时间 |
 
 > **索引**：`demand_id`（FK 索引）
+
+---
+
+### 2.11 NoShowRecord（爽约记录）
+
+服务方取消订单（爽约）的审计记录。
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| `id` | INT | **PK**, AUTO_INCREMENT | 记录 ID |
+| `user_id` | INT | **FK → User.id**, NOT NULL | 爽约用户 ID |
+| `order_id` | INT | **FK → Order.id**, UNIQUE, NOT NULL | 关联订单 ID |
+| `created_at` | DATETIME | NOT NULL | 记录时间 |
+
+> **索引**：`(user_id, created_at)`（复合索引，按用户聚合爽约记录）
+
+---
+
+### 2.12 FieldModificationLog（字段修改日志）
+
+用户敏感字段（如手机号）修改的审计日志。
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| `id` | INT | **PK**, AUTO_INCREMENT | 日志 ID |
+| `user_id` | INT | **FK → User.id**, NOT NULL | 用户 ID |
+| `field_name` | VARCHAR(20) | NOT NULL | 修改的字段名 |
+| `old_value` | VARCHAR(255) | | 修改前值 |
+| `new_value` | VARCHAR(255) | | 修改后值 |
+| `modified_at` | DATETIME | NOT NULL | 修改时间 |
+
+> **索引**：`(user_id, field_name, modified_at)`（复合索引，按用户+字段聚合日志）
 
 ---
 
@@ -252,16 +289,38 @@ erDiagram
 | User | 1 ──── N | AdminApplication (applicant) | 一个用户可提交管理员申请 |
 | User | 1 ──── N | AdminApplication (reviewer) | 一个管理员可审批多个申请 |
 | User | 1 ──── N | RefreshToken | 一个用户可有多个刷新令牌 |
-| Demand | 1 ──── N | Order | 一个需求可被多次承接（取消后可重新接单） |
+| User | 1 ──── N | NoShowRecord | 一个用户可有多次爽约记录 |
+| User | 1 ──── N | FieldModificationLog | 一个用户可有多个字段修改日志 |
+| Demand | 1 ──── 0..1 | Order | 一个需求最多对应一个有效订单（demandId 唯一） |
 | Demand | 1 ──── N | DemandImage | 一个需求可有多张图片 |
 | Order | 1 ──── N | Message | 一个订单内可有多条聊天消息 |
 | Order | 1 ──── N | Review | 一个订单可收到最多 2 条评价（双方互评） |
 | Order | 1 ──── 0..1 | Dispute | 一个订单最多发起 1 次纠纷 |
+| Order | 1 ──── 0..1 | NoShowRecord | 一个订单最多关联 1 次爽约记录 |
 | Order | N ──── 1 | Demand | 订单属于某一个需求 |
 
 ---
 
 ## 4. 订单状态机
+
+**Mermaid 状态机图：**
+
+```mermaid
+stateDiagram-v2
+    [*] --> 进行中 : 接单
+    进行中 --> 待确认 : 服务方提交完成
+    待确认 --> 已完成 : 需求方确认
+    待确认 --> 已完成 : 48h 自动确认
+    进行中 --> 已取消 : 取消订单
+    进行中 --> 纠纷中 : 发起纠纷
+    待确认 --> 纠纷中 : 发起纠纷
+    纠纷中 --> 已完成 : 管理员裁决
+    纠纷中 --> 已取消 : 管理员裁决
+    已完成 --> [*]
+    已取消 --> [*]
+```
+
+**ASCII 示意：**
 
 ```
 接单(post /orders)         提交完成(put /complete)       确认完成(put /confirm)
